@@ -1,0 +1,26 @@
+using ChoyERP.Application.Features.Auth;
+using ChoyERP.Application.Features.Clients;
+using ChoyERP.Application.Features.Roles;
+using ChoyERP.Application.Features.Users;
+using ChoyERP.Application.Features.Workers;
+using FluentValidation;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace ChoyERP.Application;
+
+public static class DependencyInjection
+{
+    public static IServiceCollection AddApplication(this IServiceCollection services)
+    {
+        services.AddValidatorsFromAssemblyContaining<AuthService>(ServiceLifetime.Scoped);
+
+        services.AddScoped<AuthService>();
+        services.AddScoped<UserService>();
+        services.AddScoped<RoleService>();
+        services.AddScoped<PermissionService>();
+        services.AddScoped<WorkerService>();
+        services.AddScoped<ClientService>();
+
+        return services;
+    }
+}

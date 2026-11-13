@@ -1,0 +1,14 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+**/.idea/
+**/TestResults/
+**/*.user
+**/*.log
+.git/
+.gitignore
+README.md
+ERP_CHOY_Especificacion_Backend.md
+migrations.sql
+docker-compose.yml

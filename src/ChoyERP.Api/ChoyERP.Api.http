@@ -1,0 +1,40 @@
+@ChoyERP.Api_HostAddress = http://localhost:5080
+
+### Login
+POST {{ChoyERP.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@choy.local",
+  "password": "Choy.Admin#2026"
+}
+
+### Usuario autenticado
+GET {{ChoyERP.Api_HostAddress}}/api/users/me
+Authorization: Bearer {{accessToken}}
+
+### Clientes
+GET {{ChoyERP.Api_HostAddress}}/api/clients?page=1&pageSize=20&sortBy=name
+Authorization: Bearer {{accessToken}}
+
+### Crear cliente
+POST {{ChoyERP.Api_HostAddress}}/api/clients
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "Cliente de Prueba",
+  "legalName": "Cliente de Prueba S.A.C.",
+  "taxId": "20111111111",
+  "contactName": "Contacto",
+  "email": "contacto@cliente.local",
+  "phone": "014444444"
+}
+
+### Roles
+GET {{ChoyERP.Api_HostAddress}}/api/roles
+Authorization: Bearer {{accessToken}}
+
+### Permisos
+GET {{ChoyERP.Api_HostAddress}}/api/permissions
+Authorization: Bearer {{accessToken}}

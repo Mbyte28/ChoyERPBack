@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: choyerp-db
+    environment:
+      POSTGRES_DB: choy_erp
+      POSTGRES_USER: choy
+      POSTGRES_PASSWORD: choy_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - choyerp_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U choy -d choy_erp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: choyerp-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: Host=db;Port=5432;Database=choy_erp;Username=choy;Password=choy_dev_password
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:-local-only-signing-key-change-me-0123456789}
+      Jwt__Issuer: ChoyERP
+      Jwt__Audience: ChoyERP.Client
+      Database__MigrateOnStartup: "true"
+      Seed__Enabled: "true"
+      Seed__DemoData: "false"
+      Seed__AdminEmail: ${SEED_ADMIN_EMAIL:-admin@choy.local}
+      Seed__AdminPassword: ${SEED_ADMIN_PASSWORD:-Choy.Admin#2026}
+      Cors__AllowedOrigins__0: ${FRONTEND_ORIGIN:-http://localhost:5173}
+    ports:
+      - "5080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  choyerp_pgdata:

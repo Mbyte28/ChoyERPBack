@@ -1,0 +1,41 @@
+## .NET
+bin/
+obj/
+out/
+publish/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+.vscode/
+.idea/
+*.DotSettings.user
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+artifacts/
+
+## Test results
+TestResults/
+coverage*.json
+coverage*.xml
+*.coverage
+
+## Entity Framework / secrets
+*.db
+*.db-shm
+*.db-wal
+secrets.json
+appsettings.Local.json
+
+## Logs
+logs/
+*.log
+
+## OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ChoyERP.Api/ChoyERP.Api.csproj" />
+    <Project Path="src/ChoyERP.Application/ChoyERP.Application.csproj" />
+    <Project Path="src/ChoyERP.Domain/ChoyERP.Domain.csproj" />
+    <Project Path="src/ChoyERP.Infrastructure/ChoyERP.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ChoyERP.UnitTests/ChoyERP.UnitTests.csproj" />
+  </Folder>
+</Solution>
