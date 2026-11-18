@@ -686,6 +686,233 @@ namespace ChoyERP.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ChoyERP.Domain.Entities.Inventory.InventoryItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("AverageUnitCost")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("average_unit_cost");
+
+                    b.Property<string>("Brand")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("brand");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("category");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("location");
+
+                    b.Property<decimal>("MinimumStock")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)")
+                        .HasColumnName("minimum_stock");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("model");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("notes");
+
+                    b.Property<decimal>("QuantityOnHand")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)")
+                        .HasColumnName("quantity_on_hand");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("unit");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_inventory_items");
+
+                    b.HasIndex("Category")
+                        .HasDatabaseName("ix_inventory_items_category");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_inventory_items_code");
+
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("ix_inventory_items_is_active");
+
+                    b.HasIndex("Name")
+                        .HasDatabaseName("ix_inventory_items_name");
+
+                    b.ToTable("inventory_items", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_inventory_items_average_unit_cost", "average_unit_cost >= 0");
+
+                            t.HasCheckConstraint("ck_inventory_items_minimum_stock", "minimum_stock >= 0");
+
+                            t.HasCheckConstraint("ck_inventory_items_quantity_on_hand", "quantity_on_hand >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("ChoyERP.Domain.Entities.Inventory.InventoryMovement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_id");
+
+                    b.Property<DateOnly>("MovementDate")
+                        .HasColumnType("date")
+                        .HasColumnName("movement_date");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)")
+                        .HasColumnName("quantity");
+
+                    b.Property<decimal>("QuantityDelta")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)")
+                        .HasColumnName("quantity_delta");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("reference");
+
+                    b.Property<decimal>("StockAfter")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)")
+                        .HasColumnName("stock_after");
+
+                    b.Property<decimal>("StockBefore")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)")
+                        .HasColumnName("stock_before");
+
+                    b.Property<decimal>("TotalCost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("total_cost");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("type");
+
+                    b.Property<decimal>("UnitCost")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("unit_cost");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_inventory_movements");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_inventory_movements_code");
+
+                    b.HasIndex("ItemId")
+                        .HasDatabaseName("ix_inventory_movements_item_id");
+
+                    b.HasIndex("MovementDate")
+                        .HasDatabaseName("ix_inventory_movements_movement_date");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("ix_inventory_movements_project_id");
+
+                    b.HasIndex("Type")
+                        .HasDatabaseName("ix_inventory_movements_type");
+
+                    b.HasIndex("ItemId", "MovementDate")
+                        .HasDatabaseName("ix_inventory_movements_item_id_movement_date");
+
+                    b.ToTable("inventory_movements", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_inventory_movements_quantity", "quantity >= 0");
+
+                            t.HasCheckConstraint("ck_inventory_movements_stock_after", "stock_after >= 0");
+
+                            t.HasCheckConstraint("ck_inventory_movements_stock_before", "stock_before >= 0");
+
+                            t.HasCheckConstraint("ck_inventory_movements_unit_cost", "unit_cost >= 0");
+                        });
+                });
+
             modelBuilder.Entity("ChoyERP.Domain.Entities.Users.Permission", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1148,6 +1375,26 @@ namespace ChoyERP.Infrastructure.Persistence.Migrations
                     b.Navigation("Quote");
                 });
 
+            modelBuilder.Entity("ChoyERP.Domain.Entities.Inventory.InventoryMovement", b =>
+                {
+                    b.HasOne("ChoyERP.Domain.Entities.Inventory.InventoryItem", "Item")
+                        .WithMany("Movements")
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_inventory_movements_inventory_items_item_id");
+
+                    b.HasOne("ChoyERP.Domain.Entities.Contracting.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_inventory_movements_projects_project_id");
+
+                    b.Navigation("Item");
+
+                    b.Navigation("Project");
+                });
+
             modelBuilder.Entity("ChoyERP.Domain.Entities.Users.RefreshToken", b =>
                 {
                     b.HasOne("ChoyERP.Domain.Entities.Users.User", "User")
@@ -1233,6 +1480,11 @@ namespace ChoyERP.Infrastructure.Persistence.Migrations
                     b.Navigation("Contract");
 
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("ChoyERP.Domain.Entities.Inventory.InventoryItem", b =>
+                {
+                    b.Navigation("Movements");
                 });
 
             modelBuilder.Entity("ChoyERP.Domain.Entities.Users.Permission", b =>

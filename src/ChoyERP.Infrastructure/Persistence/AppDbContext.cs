@@ -3,6 +3,7 @@ using ChoyERP.Domain.Common;
 using ChoyERP.Domain.Entities.Auditing;
 using ChoyERP.Domain.Entities.Clients;
 using ChoyERP.Domain.Entities.Contracting;
+using ChoyERP.Domain.Entities.Inventory;
 using ChoyERP.Domain.Entities.Users;
 using ChoyERP.Domain.Entities.Workers;
 using Microsoft.EntityFrameworkCore;
@@ -35,6 +36,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Contract> Contracts => Set<Contract>();
 
     public DbSet<Project> Projects => Set<Project>();
+
+    public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
+
+    public DbSet<InventoryMovement> InventoryMovements => Set<InventoryMovement>();
 
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 

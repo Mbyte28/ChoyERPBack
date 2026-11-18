@@ -610,3 +610,144 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261118185148_AddInventoryModule') THEN
+    CREATE TABLE inventory_items (
+        id uuid NOT NULL,
+        code character varying(30) NOT NULL,
+        name character varying(200) NOT NULL,
+        description character varying(2000),
+        category character varying(20) NOT NULL,
+        unit character varying(20) NOT NULL,
+        brand character varying(100),
+        model character varying(100),
+        location character varying(150),
+        quantity_on_hand numeric(18,3) NOT NULL,
+        minimum_stock numeric(18,3) NOT NULL,
+        average_unit_cost numeric(18,4) NOT NULL,
+        is_active boolean NOT NULL,
+        notes character varying(2000),
+        created_at timestamp with time zone NOT NULL,
+        updated_at timestamp with time zone NOT NULL,
+        CONSTRAINT pk_inventory_items PRIMARY KEY (id),
+        CONSTRAINT ck_inventory_items_average_unit_cost CHECK (average_unit_cost >= 0),
+        CONSTRAINT ck_inventory_items_minimum_stock CHECK (minimum_stock >= 0),
+        CONSTRAINT ck_inventory_items_quantity_on_hand CHECK (quantity_on_hand >= 0)
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261118185148_AddInventoryModule') THEN
+    CREATE TABLE inventory_movements (
+        id uuid NOT NULL,
+        code character varying(30) NOT NULL,
+        item_id uuid NOT NULL,
+        type character varying(20) NOT NULL,
+        movement_date date NOT NULL,
+        quantity numeric(18,3) NOT NULL,
+        quantity_delta numeric(18,3) NOT NULL,
+        stock_before numeric(18,3) NOT NULL,
+        stock_after numeric(18,3) NOT NULL,
+        unit_cost numeric(18,4) NOT NULL,
+        total_cost numeric(18,2) NOT NULL,
+        reason character varying(500),
+        reference character varying(100),
+        project_id uuid,
+        notes character varying(2000),
+        created_at timestamp with time zone NOT NULL,
+        updated_at timestamp with time zone NOT NULL,
+        CONSTRAINT pk_inventory_movements PRIMARY KEY (id),
+        CONSTRAINT ck_inventory_movements_quantity CHECK (quantity >= 0),
+        CONSTRAINT ck_inventory_movements_stock_after CHECK (stock_after >= 0),
+        CONSTRAINT ck_inventory_movements_stock_before CHECK (stock_before >= 0),
+        CONSTRAINT ck_inventory_movements_unit_cost CHECK (unit_cost >= 0),
+        CONSTRAINT fk_inventory_movements_inventory_items_item_id FOREIGN KEY (item_id) REFERENCES inventory_items (id) ON DELETE CASCADE,
+        CONSTRAINT fk_inventory_movements_projects_project_id FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE SET NULL
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261118185148_AddInventoryModule') THEN
+    CREATE INDEX ix_inventory_items_category ON inventory_items (category);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261118185148_AddInventoryModule') THEN
+    CREATE UNIQUE INDEX ix_inventory_items_code ON inventory_items (code);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261118185148_AddInventoryModule') THEN
+    CREATE INDEX ix_inventory_items_is_active ON inventory_items (is_active);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261118185148_AddInventoryModule') THEN
+    CREATE INDEX ix_inventory_items_name ON inventory_items (name);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261118185148_AddInventoryModule') THEN
+    CREATE UNIQUE INDEX ix_inventory_movements_code ON inventory_movements (code);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261118185148_AddInventoryModule') THEN
+    CREATE INDEX ix_inventory_movements_item_id ON inventory_movements (item_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261118185148_AddInventoryModule') THEN
+    CREATE INDEX ix_inventory_movements_item_id_movement_date ON inventory_movements (item_id, movement_date);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261118185148_AddInventoryModule') THEN
+    CREATE INDEX ix_inventory_movements_movement_date ON inventory_movements (movement_date);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261118185148_AddInventoryModule') THEN
+    CREATE INDEX ix_inventory_movements_project_id ON inventory_movements (project_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261118185148_AddInventoryModule') THEN
+    CREATE INDEX ix_inventory_movements_type ON inventory_movements (type);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261118185148_AddInventoryModule') THEN
+    INSERT INTO "__EFMigrationsHistory" (migration_id, product_version)
+    VALUES ('20261118185148_AddInventoryModule', '10.0.15');
+    END IF;
+END $EF$;
+COMMIT;
+

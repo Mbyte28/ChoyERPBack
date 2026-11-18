@@ -1,6 +1,7 @@
 using ChoyERP.Application.Common.Interfaces;
 using ChoyERP.Application.Common.Security;
 using ChoyERP.Domain.Entities.Clients;
+using ChoyERP.Domain.Entities.Inventory;
 using ChoyERP.Domain.Entities.Users;
 using ChoyERP.Domain.Entities.Workers;
 using Microsoft.EntityFrameworkCore;
@@ -227,6 +228,94 @@ public sealed class DatabaseSeeder(
             db.Clients.AddRange(andina, frigorifico);
         }
 
+        await SeedInventoryDemoDataAsync(cancellationToken);
+
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task SeedInventoryDemoDataAsync(CancellationToken cancellationToken)
+    {
+        if (await db.InventoryItems.AnyAsync(cancellationToken))
+        {
+            return;
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var items = new[]
+        {
+            new InventoryItem
+            {
+                Code = "ART-00001",
+                Name = "Gas refrigerante R-404A",
+                Description = "Cilindro de gas refrigerante para sistemas de baja temperatura.",
+                Category = InventoryCategory.Supply,
+                Unit = InventoryUnit.Kilogram,
+                Brand = "Freon",
+                Location = "Estante A-1",
+                QuantityOnHand = 35m,
+                MinimumStock = 20m,
+                AverageUnitCost = 28.5m,
+            },
+            new InventoryItem
+            {
+                Code = "ART-00002",
+                Name = "Compresor hermético 1 HP",
+                Description = "Compresor para cámara frigorífica pequeña.",
+                Category = InventoryCategory.Equipment,
+                Unit = InventoryUnit.Unit,
+                Brand = "Embraco",
+                Model = "NEK6210Z",
+                Location = "Estante B-2",
+                QuantityOnHand = 1m,
+                MinimumStock = 2m,
+                AverageUnitCost = 850m,
+            },
+            new InventoryItem
+            {
+                Code = "ART-00003",
+                Name = "Filtro secador 3/8\"",
+                Description = "Filtro secador para línea de líquido.",
+                Category = InventoryCategory.Spare,
+                Unit = InventoryUnit.Unit,
+                Location = "Cajón C-3",
+                QuantityOnHand = 24m,
+                MinimumStock = 10m,
+                AverageUnitCost = 12m,
+            },
+            new InventoryItem
+            {
+                Code = "ART-00004",
+                Name = "Tubería de cobre 1/2\"",
+                Category = InventoryCategory.Component,
+                Unit = InventoryUnit.Meter,
+                Location = "Rack D-1",
+                QuantityOnHand = 120m,
+                MinimumStock = 50m,
+                AverageUnitCost = 8.4m,
+            },
+        };
+
+        db.InventoryItems.AddRange(items);
+
+        var movements = items.Select((item, index) => new InventoryMovement
+        {
+            Code = $"MOV-{index + 1:D5}",
+            Item = item,
+            Type = InventoryMovementType.Entry,
+            MovementDate = today,
+            Quantity = item.QuantityOnHand,
+            QuantityDelta = item.QuantityOnHand,
+            StockBefore = 0,
+            StockAfter = item.QuantityOnHand,
+            UnitCost = item.AverageUnitCost,
+            TotalCost = Math.Round(
+                item.QuantityOnHand * item.AverageUnitCost,
+                2,
+                MidpointRounding.AwayFromZero),
+            Reason = "Stock inicial de demostración",
+        });
+
+        db.InventoryMovements.AddRange(movements);
     }
 }

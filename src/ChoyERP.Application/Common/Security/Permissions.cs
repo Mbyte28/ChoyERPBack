@@ -67,6 +67,15 @@ public static class Permissions
         public const string Update = "projects.update";
     }
 
+    public static class Inventory
+    {
+        public const string Read = "inventory.read";
+        public const string Create = "inventory.create";
+        public const string Update = "inventory.update";
+        public const string Deactivate = "inventory.deactivate";
+        public const string Move = "inventory.move";
+    }
+
     public static IReadOnlyList<PermissionDefinition> All { get; } =
     [
         new(Users.Read, "Consultar usuarios", "Usuarios"),
@@ -99,6 +108,11 @@ public static class Permissions
         new(Projects.Read, "Consultar proyectos", "Proyectos"),
         new(Projects.Create, "Crear proyectos desde contratos vigentes", "Proyectos"),
         new(Projects.Update, "Editar proyectos, avance y estado", "Proyectos"),
+        new(Inventory.Read, "Consultar artículos, existencias y movimientos", "Almacén"),
+        new(Inventory.Create, "Registrar artículos de almacén", "Almacén"),
+        new(Inventory.Update, "Editar artículos y niveles mínimos", "Almacén"),
+        new(Inventory.Deactivate, "Activar o desactivar artículos sin existencia", "Almacén"),
+        new(Inventory.Move, "Registrar entradas, salidas y ajustes de inventario", "Almacén"),
     ];
 }
 

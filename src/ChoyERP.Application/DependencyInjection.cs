@@ -1,6 +1,7 @@
 using ChoyERP.Application.Features.Auth;
 using ChoyERP.Application.Features.Clients;
 using ChoyERP.Application.Features.Contracting;
+using ChoyERP.Application.Features.Inventory;
 using ChoyERP.Application.Features.Roles;
 using ChoyERP.Application.Features.Users;
 using ChoyERP.Application.Features.Workers;
@@ -25,6 +26,8 @@ public static class DependencyInjection
         services.AddScoped<QuoteService>();
         services.AddScoped<ContractService>();
         services.AddScoped<ProjectService>();
+        services.AddScoped<InventoryItemService>();
+        services.AddScoped<InventoryMovementService>();
 
         return services;
     }

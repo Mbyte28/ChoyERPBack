@@ -41,6 +41,7 @@ public static class RoleCatalog
                 Permissions.Contracts.Update,
                 Permissions.Projects.Read,
                 Permissions.Projects.Create,
+                Permissions.Inventory.Read,
             ]),
         new(
             RoleNames.Engineering,
@@ -53,15 +54,29 @@ public static class RoleCatalog
                 Permissions.Contracts.Read,
                 Permissions.Projects.Read,
                 Permissions.Projects.Update,
+                Permissions.Inventory.Read,
             ]),
         new(
             RoleNames.Warehouse,
             "Almacén y movimientos de inventario.",
-            [Permissions.Clients.Read]),
+            [
+                Permissions.Clients.Read,
+                Permissions.Projects.Read,
+                Permissions.Inventory.Read,
+                Permissions.Inventory.Create,
+                Permissions.Inventory.Update,
+                Permissions.Inventory.Deactivate,
+                Permissions.Inventory.Move,
+            ]),
         new(
             RoleNames.Technician,
             "Seguimiento de equipos, inspecciones y mantenimiento.",
-            [Permissions.Clients.Read, Permissions.Workers.Read, Permissions.Projects.Read]),
+            [
+                Permissions.Clients.Read,
+                Permissions.Workers.Read,
+                Permissions.Projects.Read,
+                Permissions.Inventory.Read,
+            ]),
     ];
 }
 

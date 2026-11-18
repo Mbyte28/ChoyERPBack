@@ -1,7 +1,7 @@
 # ChoyERP — Backend
 
-Backend interno del ERP de CHOY. Implementa la **Fase 1** y el módulo de
-**Contrataciones** definidos en
+Backend interno del ERP de CHOY. Implementa la **Fase 1**, el módulo de
+**Contrataciones** y el módulo de **Almacén** definidos en
 [`ERP_CHOY_Especificacion_Backend.md`](ERP_CHOY_Especificacion_Backend.md):
 
 - Estructura base de la solución y manejo consistente de errores.
@@ -10,12 +10,13 @@ Backend interno del ERP de CHOY. Implementa la **Fase 1** y el módulo de
 - Trabajadores de CHOY.
 - Clientes y sus direcciones.
 - Solicitudes, cotizaciones, contratos y proyectos.
+- Almacén: artículos, existencias, entradas, salidas, ajustes y kardex.
 - Documentación OpenAPI / Swagger UI.
 - Migraciones de base de datos y seed inicial.
 
-> **Estado:** Fase 1 y módulo de Contrataciones. Los módulos de ingeniería,
-> ventas, equipos, mantenimiento y almacén se incorporarán en las siguientes
-> fases sobre esta misma estructura.
+> **Estado:** Fase 1, Contrataciones y Almacén. Los módulos de ingeniería,
+> ventas, equipos y mantenimiento se incorporarán en las siguientes fases
+> sobre esta misma estructura.
 
 ---
 
@@ -63,10 +64,10 @@ ChoyERP.Api ──────────────► ChoyERP.Infrastructure
 ```
 src/
   ChoyERP.Domain/
-    Entities/{Users,Workers,Clients,Contracting,Auditing}
+    Entities/{Users,Workers,Clients,Contracting,Inventory,Auditing}
   ChoyERP.Application/
     Common/{Exceptions,Extensions,Interfaces,Models,Security}
-    Features/{Auth,Users,Roles,Workers,Clients,Contracting}
+    Features/{Auth,Users,Roles,Workers,Clients,Contracting,Inventory}
   ChoyERP.Infrastructure/
     Persistence/{Configurations,Migrations,Seed}
     Identity/  Auditing/
@@ -121,7 +122,8 @@ docker compose up --build
 El seed es idempotente y se controla con la sección `Seed`. En producción
 configure `Seed__AdminPassword` (o desactive el seed) y **cambie la
 contraseña en el primer acceso**. En Development también se crean datos de
-demostración (`Seed:DemoData`): tres trabajadores y dos clientes.
+demostración (`Seed:DemoData`): tres trabajadores, dos clientes, cuatro
+artículos de almacén y su stock inicial (uno de ellos bajo el mínimo).
 
 ---
 
@@ -186,10 +188,13 @@ deja las claves sensibles vacías a propósito.
 | Cotizaciones | `quotes.read`, `quotes.create`, `quotes.update`, `quotes.send`, `quotes.decide` |
 | Contratos | `contracts.read`, `contracts.create`, `contracts.update` |
 | Proyectos | `projects.read`, `projects.create`, `projects.update` |
+| Almacén | `inventory.read`, `inventory.create`, `inventory.update`, `inventory.deactivate`, `inventory.move` |
 
 `Administrador` recibe todos los permisos al sembrarse. `Comercial` recibe el
-flujo completo de contrataciones; `Ingeniería` consulta solicitudes,
-cotizaciones y contratos, y actualiza proyectos; `Técnico` consulta proyectos.
+flujo completo de contrataciones y consulta existencias; `Ingeniería` consulta
+solicitudes, cotizaciones, contratos, proyectos y almacén, y actualiza
+proyectos; `Almacenero` gestiona el catálogo y los movimientos de inventario;
+`Técnico` consulta proyectos y existencias.
 
 > Al incorporar permisos nuevos, vuelva a ejecutar el seed (`Seed:Enabled=true`)
 > una vez para registrarlos y asignarlos a los roles del sistema.
@@ -349,6 +354,58 @@ Los enums se serializan como texto (`JsonStringEnumConverter`):
 | Estado de contrato | `Draft`, `Active`, `Completed`, `Cancelled` |
 | Estado de proyecto | `Planned`, `InProgress`, `Paused`, `Completed`, `Cancelled` |
 
+### Almacén
+
+Catálogo de artículos y control de existencias. Los códigos se generan
+automáticamente con los prefijos `ART-` (artículo) y `MOV-` (movimiento).
+
+#### Artículos
+
+| Método | Ruta | Permiso |
+|---|---|---|
+| GET | `/api/inventory/items` | `inventory.read` |
+| GET | `/api/inventory/items/{id}` | `inventory.read` |
+| GET | `/api/inventory/items/{id}/movements` | `inventory.read` |
+| POST | `/api/inventory/items` | `inventory.create` |
+| PUT | `/api/inventory/items/{id}` | `inventory.update` |
+| PATCH | `/api/inventory/items/{id}/status` | `inventory.deactivate` |
+
+#### Movimientos
+
+| Método | Ruta | Permiso |
+|---|---|---|
+| GET | `/api/inventory/movements` | `inventory.read` |
+| GET | `/api/inventory/movements/{id}` | `inventory.read` |
+| POST | `/api/inventory/movements` | `inventory.move` |
+
+Reglas del flujo:
+
+- La existencia **solo** cambia con movimientos; editar el artículo no altera
+  el stock. Un artículo nuevo empieza con existencia cero.
+- Una **entrada** (`Entry`) suma cantidad y recalcula el **costo promedio
+  ponderado**. Si no se envía `unitCost` se usa el costo promedio vigente.
+- Una **salida** (`Exit`) valida la disponibilidad y descuenta al costo
+  promedio; si no hay existencia suficiente devuelve `409` con el disponible.
+  Puede asociarse a un proyecto (`projectId`), pero no a uno cancelado.
+- Un **ajuste** (`Adjustment`) interpreta `quantity` como la **existencia
+  contada resultante**, exige `reason` y guarda la diferencia. Un ajuste que no
+  cambia la existencia devuelve `409`.
+- `movementDate` no puede ser futura. `stockBefore`, `stockAfter` y
+  `quantityDelta` quedan congelados en cada movimiento para construir el kardex.
+- `totalCost` lleva signo: positivo en entradas y negativo en salidas o
+  faltantes de un ajuste.
+- Un artículo inactivo no admite movimientos y no puede desactivarse mientras
+  tenga existencia. La unidad de medida tampoco cambia si ya hay movimientos
+  registrados (devuelve `409`).
+
+#### Catálogos de almacén
+
+| Catálogo | Valores |
+|---|---|
+| `category` | `Spare`, `Component`, `Equipment`, `Supply`, `Tool`, `Other` |
+| `unit` | `Unit`, `Kilogram`, `Liter`, `Meter`, `Box`, `Set`, `Other` |
+| `type` (movimiento) | `Entry`, `Exit`, `Adjustment` |
+
 ### Listados
 
 Los listados aceptan `page` (1..n), `pageSize` (máx. 100), `search`,
@@ -373,8 +430,10 @@ Ordenamientos admitidos:
 - Cotizaciones: `createdAt` (por defecto), `code`, `version`, `status`, `total`, `validUntil`
 - Contratos: `createdAt` (por defecto), `code`, `status`, `amount`, `startDate`
 - Proyectos: `createdAt` (por defecto), `code`, `name`, `status`, `progress`, `startDate`
+- Artículos: `name` (por defecto), `code`, `category`, `quantityOnHand`, `minimumStock`, `createdAt`
+- Movimientos: `movementDate` (por defecto), `code`, `type`, `quantity`, `createdAt`
 
-Además, los listados de contrataciones aceptan filtros específicos:
+Además, los listados aceptan filtros específicos:
 
 | Recurso | Filtros |
 |---|---|
@@ -382,6 +441,8 @@ Además, los listados de contrataciones aceptan filtros específicos:
 | Cotizaciones | `status`, `projectRequestId`, `clientId` |
 | Contratos | `status`, `clientId`, `quoteId` |
 | Proyectos | `status`, `clientId`, `contractId`, `responsibleWorkerId` |
+| Artículos | `category`, `unit`, `isActive`, `belowMinimum` |
+| Movimientos | `itemId`, `type`, `projectId`, `fromDate`, `toDate` |
 
 ---
 
@@ -391,7 +452,8 @@ Esquema en `snake_case` generado con migraciones de EF Core:
 
 `users`, `roles`, `permissions`, `user_roles`, `role_permissions`,
 `refresh_tokens`, `workers`, `clients`, `client_addresses`, `audit_logs`,
-`project_requests`, `quotes`, `quote_items`, `contracts`, `projects`.
+`project_requests`, `quotes`, `quote_items`, `contracts`, `projects`,
+`inventory_items`, `inventory_movements`.
 
 ### Comandos
 
@@ -427,14 +489,18 @@ ejecutar `dotnet ef`.
 - Correo de usuario y nombre de rol únicos (normalizados).
 - Documento de trabajador y código/RUC de cliente únicos.
 - Una cuenta por trabajador (índice único en `users.worker_id`).
-- Códigos de solicitud, cotización, contrato y proyecto únicos.
+- Códigos de solicitud, cotización, contrato, proyecto, artículo y movimiento únicos.
 - Una sola cotización en borrador por solicitud y una sola aceptada.
 - Un solo contrato por cotización y un solo proyecto por contrato.
 - Importes y cantidades validados en API y protegidos con *check constraints*
   en PostgreSQL (`quantity > 0`, avance entre 0 y 100).
-- Borrado en cascada de sesiones, líneas de cotización y relaciones
-  rol/permiso.
+- Existencia, stock mínimo y costo promedio no negativos; cada movimiento es
+  coherente con su kardex (`stock_before`/`stock_after`).
+- Borrado en cascada de sesiones, líneas de cotización, movimientos de
+  almacén y relaciones rol/permiso. El proyecto asociado a un movimiento se
+  conserva con `ON DELETE SET NULL`.
 - Desactivar un trabajador con cuenta activa devuelve `409`.
+- Desactivar un artículo con existencia devuelve `409`.
 
 ---
 
@@ -456,6 +522,9 @@ Se registran en `audit_logs` los eventos relevantes sin datos sensibles:
   `contracts.completed`
 - `projects.created`, `projects.updated`, `projects.progress_updated`,
   `projects.status_changed`, `projects.completed`, `projects.cancelled`
+- `inventory.items.created`, `inventory.items.updated`,
+  `inventory.items.activated`, `inventory.items.deactivated`
+- `inventory.movements.created` (incluye tipo, artículo y existencia resultante)
 
 Cada registro incluye usuario, correo, IP, user agent, entidad afectada y
 detalle. Los intentos fallidos de login también se registran.
@@ -468,7 +537,7 @@ detalle. Los intentos fallidos de login también se registran.
 dotnet test
 ```
 
-Cobertura actual (33 pruebas):
+Cobertura actual (45 pruebas):
 
 - Política de contraseñas, BCrypt y hash de tokens.
 - Login correcto/incorrecto/cuenta desactivada.
@@ -479,6 +548,11 @@ Cobertura actual (33 pruebas):
   versionado de cotizaciones, aceptación y rechazo de competidoras, vencimiento,
   inmutabilidad de cotizaciones enviadas, unicidad de contrato y proyecto,
   cancelación en cascada y validación de dirección del cliente.
+- Almacén: código automático de artículos, costo promedio ponderado en
+  entradas, validación de disponibilidad en salidas, ajustes por conteo
+  físico, bloqueo de desactivación con existencia, movimientos sobre
+  artículos inactivos o proyectos cancelados, fechas futuras, cambio de unidad
+  con movimientos, filtro de stock mínimo y validaciones de entrada.
 
 ---
 
@@ -494,25 +568,38 @@ Cobertura actual (33 pruebas):
    roles agrupan permisos y el token lleva los permisos efectivos.
 4. **DTOs y ProblemDetails.** El contrato HTTP no expone entidades y los
    errores son uniformes y documentados.
-5. **Desactivación en lugar de borrado.** Usuarios, trabajadores y clientes
-   se desactivan para conservar el historial futuro (proyectos, equipos,
-   movimientos).
+5. **Desactivación en lugar de borrado.** Usuarios, trabajadores, clientes y
+   artículos se desactivan para conservar el historial de proyectos, equipos y
+   movimientos.
 6. **`snake_case` en PostgreSQL.** Esquema consistente con las convenciones
    habituales de PostgreSQL, aplicado por `EFCore.NamingConventions`.
 7. **Auditoría en base de datos.** Requisito de seguridad de la
    especificación, especialmente para inventario y órdenes de trabajo.
 8. **Validación con FluentValidation.** Reglas expresivas y reutilizables,
    ejecutadas por un filtro global antes de entrar al caso de uso.
+9. **Kardex inmutable y costo promedio ponderado.** Cada movimiento guarda la
+   existencia anterior y resultante y el costo aplicado, de modo que el
+   historial no dependa del estado actual del artículo. El costo promedio se
+   recalcula en cada entrada.
+10. **Doble protección de la existencia.** El servicio valida disponibilidad
+    antes de guardar y PostgreSQL impide existencias negativas con un *check
+    constraint*, incluso ante errores de concurrencia.
 
 ### Simplificaciones conocidas
 
 - El código de cliente se autogenera con el patrón `CLI-00001`. En alta
   concurrencia el índice único protege la integridad, pero puede devolver
-  `409`; el cliente puede reintentar. Lo mismo aplica a `SOL-`, `COT-`, `CTR-`
-  y `PRY-`.
+  `409`; el cliente puede reintentar. Lo mismo aplica a `SOL-`, `COT-`, `CTR-`,
+  `PRY-`, `ART-` y `MOV-`.
 - Los roles del sistema no son editables desde la API; se actualizan por
   seed cuando cambia el catálogo de permisos.
-- El catálogo comercial y el de almacén se definirán en la fase de ventas.
+- El catálogo comercial y su relación con los artículos de almacén se
+  definirán en la fase de ventas.
+- El inventario usa costo promedio ponderado; no hay valorización por lote
+  ni FIFO.
+- Las salidas concurrentes del mismo artículo pueden competir. El *check
+  constraint* impide existencias negativas y la API devuelve `409`, pero aún
+  no hay bloqueo optimista explícito (por ejemplo, `xmin`).
 - No hay endpoint de consulta de auditoría todavía (los datos ya se
   registran).
 
@@ -521,8 +608,7 @@ Cobertura actual (33 pruebas):
 ## 11. Siguientes fases
 
 1. Ingeniería y documentación técnica con archivos adjuntos.
-2. Almacén: catálogo de artículos, movimientos de inventario y existencias.
-3. Ventas de equipos e instalaciones asociadas a clientes y proyectos.
-4. Seguimiento de equipos, visitas e inspecciones.
-5. Mantenimiento preventivo y correctivo con órdenes de trabajo.
-6. Endpoint de auditoría, pruebas de integración con Testcontainers y CI/CD.
+2. Ventas de equipos e instalaciones asociadas a clientes y proyectos.
+3. Seguimiento de equipos, visitas e inspecciones.
+4. Mantenimiento preventivo y correctivo con órdenes de trabajo.
+5. Endpoint de auditoría, pruebas de integración con Testcontainers y CI/CD.
