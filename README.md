@@ -1,6 +1,7 @@
 # ChoyERP — Backend
 
-Backend interno del ERP de CHOY. Implementa la **Fase 1** definida en
+Backend interno del ERP de CHOY. Implementa la **Fase 1** y el módulo de
+**Contrataciones** definidos en
 [`ERP_CHOY_Especificacion_Backend.md`](ERP_CHOY_Especificacion_Backend.md):
 
 - Estructura base de la solución y manejo consistente de errores.
@@ -8,12 +9,13 @@ Backend interno del ERP de CHOY. Implementa la **Fase 1** definida en
 - Usuarios, roles y permisos.
 - Trabajadores de CHOY.
 - Clientes y sus direcciones.
+- Solicitudes, cotizaciones, contratos y proyectos.
 - Documentación OpenAPI / Swagger UI.
 - Migraciones de base de datos y seed inicial.
 
-> **Estado:** Fase 1. Los módulos de contrataciones, ingeniería, ventas,
-> equipos, mantenimiento y almacén se incorporarán en las siguientes fases
-> sobre esta misma estructura.
+> **Estado:** Fase 1 y módulo de Contrataciones. Los módulos de ingeniería,
+> ventas, equipos, mantenimiento y almacén se incorporarán en las siguientes
+> fases sobre esta misma estructura.
 
 ---
 
@@ -61,10 +63,10 @@ ChoyERP.Api ──────────────► ChoyERP.Infrastructure
 ```
 src/
   ChoyERP.Domain/
-    Entities/{Users,Workers,Clients,Auditing}
+    Entities/{Users,Workers,Clients,Contracting,Auditing}
   ChoyERP.Application/
     Common/{Exceptions,Extensions,Interfaces,Models,Security}
-    Features/{Auth,Users,Roles,Workers,Clients}
+    Features/{Auth,Users,Roles,Workers,Clients,Contracting}
   ChoyERP.Infrastructure/
     Persistence/{Configurations,Migrations,Seed}
     Identity/  Auditing/
@@ -180,8 +182,17 @@ deja las claves sensibles vacías a propósito.
 | Roles | `roles.read`, `roles.manage` |
 | Trabajadores | `workers.read`, `workers.create`, `workers.update`, `workers.deactivate` |
 | Clientes | `clients.read`, `clients.create`, `clients.update`, `clients.deactivate` |
+| Solicitudes | `requests.read`, `requests.create`, `requests.update`, `requests.cancel` |
+| Cotizaciones | `quotes.read`, `quotes.create`, `quotes.update`, `quotes.send`, `quotes.decide` |
+| Contratos | `contracts.read`, `contracts.create`, `contracts.update` |
+| Proyectos | `projects.read`, `projects.create`, `projects.update` |
 
-`Administrador` recibe todos los permisos al sembrarse.
+`Administrador` recibe todos los permisos al sembrarse. `Comercial` recibe el
+flujo completo de contrataciones; `Ingeniería` consulta solicitudes,
+cotizaciones y contratos, y actualiza proyectos; `Técnico` consulta proyectos.
+
+> Al incorporar permisos nuevos, vuelva a ejecutar el seed (`Seed:Enabled=true`)
+> una vez para registrarlos y asignarlos a los roles del sistema.
 
 ---
 
@@ -246,6 +257,98 @@ Todas las respuestas son JSON. Los errores usan `application/problem+json`
 | PUT | `/api/clients/{id}/addresses/{addressId}` | `clients.update` |
 | DELETE | `/api/clients/{id}/addresses/{addressId}` | `clients.update` |
 
+### Contrataciones
+
+Flujo completo: **solicitud → cotización → contrato → proyecto**. Los códigos
+se generan automáticamente con los prefijos `SOL-`, `COT-`, `CTR-` y `PRY-`.
+
+#### Solicitudes de proyecto
+
+| Método | Ruta | Permiso |
+|---|---|---|
+| GET | `/api/project-requests` | `requests.read` |
+| GET | `/api/project-requests/{id}` | `requests.read` |
+| POST | `/api/project-requests` | `requests.create` |
+| PUT | `/api/project-requests/{id}` | `requests.update` |
+| PATCH | `/api/project-requests/{id}/status` | `requests.cancel` |
+
+#### Cotizaciones
+
+| Método | Ruta | Permiso |
+|---|---|---|
+| GET | `/api/quotes` | `quotes.read` |
+| GET | `/api/quotes/{id}` | `quotes.read` |
+| POST | `/api/quotes` | `quotes.create` |
+| PUT | `/api/quotes/{id}` | `quotes.update` |
+| POST | `/api/quotes/{id}/send` | `quotes.send` |
+| POST | `/api/quotes/{id}/accept` | `quotes.decide` |
+| POST | `/api/quotes/{id}/reject` | `quotes.decide` |
+| POST | `/api/quotes/{id}/cancel` | `quotes.update` |
+
+Reglas del flujo:
+
+- Solo puede existir **una cotización en borrador** por solicitud. Al enviarla
+  se libera la creación de una nueva versión (`COT-00002`, `COT-00003`…).
+- Las cotizaciones enviadas son **inmutables**: para cambiar importes se crea
+  una versión nueva.
+- Aceptar una cotización **rechaza automáticamente** las demás y marca la
+  solicitud como `Accepted`.
+- Una cotización vencida (`validUntil`) no se puede aceptar: pasa a `Expired`.
+- Los estados `Quoted` y `Accepted` de la solicitud los asigna el flujo de
+  cotizaciones; no se pueden fijar manualmente.
+
+#### Contratos
+
+| Método | Ruta | Permiso |
+|---|---|---|
+| GET | `/api/contracts` | `contracts.read` |
+| GET | `/api/contracts/{id}` | `contracts.read` |
+| POST | `/api/contracts` | `contracts.create` |
+| PUT | `/api/contracts/{id}` | `contracts.update` |
+| PATCH | `/api/contracts/{id}/status` | `contracts.update` |
+
+- Se crea un contrato por cotización **aceptada**; el importe y la moneda se
+  copian de la cotización.
+- Transiciones: `Draft → Active → Completed`, y `Draft`/`Active → Cancelled`.
+- Al anular un contrato se cancela el proyecto asociado si no está finalizado, la
+  cotización aceptada pasa a `Cancelled` y la solicitud vuelve a `InEvaluation`
+  para permitir una nueva cotización.
+- No se puede completar un contrato mientras su proyecto no esté completado, ni
+  anularlo si el proyecto ya está completado.
+
+#### Proyectos
+
+| Método | Ruta | Permiso |
+|---|---|---|
+| GET | `/api/projects` | `projects.read` |
+| GET | `/api/projects/{id}` | `projects.read` |
+| POST | `/api/projects` | `projects.create` |
+| PUT | `/api/projects/{id}` | `projects.update` |
+| PATCH | `/api/projects/{id}/progress` | `projects.update` |
+| PATCH | `/api/projects/{id}/status` | `projects.update` |
+
+- Se crea un proyecto por contrato **vigente** (`Active`).
+- El nombre y la ubicación se heredan de la solicitud; la ubicación queda
+  congelada como texto para conservar el historial.
+- Transiciones: `Planned → InProgress → Paused/Completed`, y
+  `Planned`/`InProgress`/`Paused → Cancelled`.
+- Al registrar un avance mayor que cero el proyecto pasa a `InProgress`; al
+  llegar a **100 %** se completa, se registra la fecha real de fin y el
+  contrato vigente se cierra automáticamente.
+
+#### Catálogos y estados
+
+Los enums se serializan como texto (`JsonStringEnumConverter`):
+
+| Catálogo | Valores |
+|---|---|
+| `projectType` | `ColdRoom`, `FreezingTunnel`, `CoolingTunnel`, `Other` |
+| `priority` | `Low`, `Normal`, `High`, `Urgent` |
+| Estado de solicitud | `Received`, `InEvaluation`, `Quoted`, `Accepted`, `Rejected`, `Cancelled` |
+| Estado de cotización | `Draft`, `Sent`, `Accepted`, `Rejected`, `Expired`, `Cancelled` |
+| Estado de contrato | `Draft`, `Active`, `Completed`, `Cancelled` |
+| Estado de proyecto | `Planned`, `InProgress`, `Paused`, `Completed`, `Cancelled` |
+
 ### Listados
 
 Los listados aceptan `page` (1..n), `pageSize` (máx. 100), `search`,
@@ -266,6 +369,19 @@ Ordenamientos admitidos:
 - Usuarios: `email`, `createdAt`, `lastLoginAt`, `isActive`
 - Trabajadores: `lastName` (por defecto), `documentNumber`, `createdAt`, `hireDate`
 - Clientes: `name` (por defecto), `code`, `createdAt`, `isActive`
+- Solicitudes: `requestedAt` (por defecto), `code`, `title`, `status`, `priority`, `createdAt`
+- Cotizaciones: `createdAt` (por defecto), `code`, `version`, `status`, `total`, `validUntil`
+- Contratos: `createdAt` (por defecto), `code`, `status`, `amount`, `startDate`
+- Proyectos: `createdAt` (por defecto), `code`, `name`, `status`, `progress`, `startDate`
+
+Además, los listados de contrataciones aceptan filtros específicos:
+
+| Recurso | Filtros |
+|---|---|
+| Solicitudes | `status`, `clientId`, `projectType`, `priority`, `responsibleWorkerId` |
+| Cotizaciones | `status`, `projectRequestId`, `clientId` |
+| Contratos | `status`, `clientId`, `quoteId` |
+| Proyectos | `status`, `clientId`, `contractId`, `responsibleWorkerId` |
 
 ---
 
@@ -274,7 +390,8 @@ Ordenamientos admitidos:
 Esquema en `snake_case` generado con migraciones de EF Core:
 
 `users`, `roles`, `permissions`, `user_roles`, `role_permissions`,
-`refresh_tokens`, `workers`, `clients`, `client_addresses`, `audit_logs`.
+`refresh_tokens`, `workers`, `clients`, `client_addresses`, `audit_logs`,
+`project_requests`, `quotes`, `quote_items`, `contracts`, `projects`.
 
 ### Comandos
 
@@ -310,7 +427,13 @@ ejecutar `dotnet ef`.
 - Correo de usuario y nombre de rol únicos (normalizados).
 - Documento de trabajador y código/RUC de cliente únicos.
 - Una cuenta por trabajador (índice único en `users.worker_id`).
-- Borrado en cascada de sesiones, direcciones y relaciones rol/permiso.
+- Códigos de solicitud, cotización, contrato y proyecto únicos.
+- Una sola cotización en borrador por solicitud y una sola aceptada.
+- Un solo contrato por cotización y un solo proyecto por contrato.
+- Importes y cantidades validados en API y protegidos con *check constraints*
+  en PostgreSQL (`quantity > 0`, avance entre 0 y 100).
+- Borrado en cascada de sesiones, líneas de cotización y relaciones
+  rol/permiso.
 - Desactivar un trabajador con cuenta activa devuelve `409`.
 
 ---
@@ -326,6 +449,13 @@ Se registran en `audit_logs` los eventos relevantes sin datos sensibles:
 - `workers.created`, `workers.updated`, `workers.activated`, `workers.deactivated`
 - `clients.created`, `clients.updated`, `clients.activated`, `clients.deactivated`
 - `clients.address_added`, `clients.address_updated`, `clients.address_deleted`
+- `requests.created`, `requests.updated`, `requests.status_changed`
+- `quotes.created`, `quotes.updated`, `quotes.sent`, `quotes.accepted`,
+  `quotes.rejected`, `quotes.cancelled`, `quotes.expired`
+- `contracts.created`, `contracts.updated`, `contracts.status_changed`,
+  `contracts.completed`
+- `projects.created`, `projects.updated`, `projects.progress_updated`,
+  `projects.status_changed`, `projects.completed`, `projects.cancelled`
 
 Cada registro incluye usuario, correo, IP, user agent, entidad afectada y
 detalle. Los intentos fallidos de login también se registran.
@@ -338,13 +468,17 @@ detalle. Los intentos fallidos de login también se registran.
 dotnet test
 ```
 
-Cobertura actual (21 pruebas):
+Cobertura actual (33 pruebas):
 
 - Política de contraseñas, BCrypt y hash de tokens.
 - Login correcto/incorrecto/cuenta desactivada.
 - Rotación de refresh token y detección de reutilización.
 - Reglas de usuarios: correo duplicado, autodesactivación, revocación de sesiones.
 - Reglas de clientes: código automático, RUC único, direcciones primarias.
+- Contrataciones: flujo completo solicitud → cotización → contrato → proyecto,
+  versionado de cotizaciones, aceptación y rechazo de competidoras, vencimiento,
+  inmutabilidad de cotizaciones enviadas, unicidad de contrato y proyecto,
+  cancelación en cascada y validación de dirección del cliente.
 
 ---
 
@@ -370,11 +504,12 @@ Cobertura actual (21 pruebas):
 8. **Validación con FluentValidation.** Reglas expresivas y reutilizables,
    ejecutadas por un filtro global antes de entrar al caso de uso.
 
-### Simplificaciones conocidas de la Fase 1
+### Simplificaciones conocidas
 
 - El código de cliente se autogenera con el patrón `CLI-00001`. En alta
   concurrencia el índice único protege la integridad, pero puede devolver
-  `409`; el cliente puede reintentar.
+  `409`; el cliente puede reintentar. Lo mismo aplica a `SOL-`, `COT-`, `CTR-`
+  y `PRY-`.
 - Los roles del sistema no son editables desde la API; se actualizan por
   seed cuando cambia el catálogo de permisos.
 - El catálogo comercial y el de almacén se definirán en la fase de ventas.
@@ -385,9 +520,9 @@ Cobertura actual (21 pruebas):
 
 ## 11. Siguientes fases
 
-1. Contrataciones: solicitudes, cotizaciones, contratos y proyectos.
-2. Ingeniería y documentación técnica con archivos adjuntos.
-3. Ventas, instalaciones y equipos.
-4. Visitas, inspecciones y mantenimiento preventivo/correctivo.
-5. Almacén, movimientos de inventario y transacciones.
+1. Ingeniería y documentación técnica con archivos adjuntos.
+2. Almacén: catálogo de artículos, movimientos de inventario y existencias.
+3. Ventas de equipos e instalaciones asociadas a clientes y proyectos.
+4. Seguimiento de equipos, visitas e inspecciones.
+5. Mantenimiento preventivo y correctivo con órdenes de trabajo.
 6. Endpoint de auditoría, pruebas de integración con Testcontainers y CI/CD.

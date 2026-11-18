@@ -36,6 +36,37 @@ public static class Permissions
         public const string Deactivate = "clients.deactivate";
     }
 
+    public static class ProjectRequests
+    {
+        public const string Read = "requests.read";
+        public const string Create = "requests.create";
+        public const string Update = "requests.update";
+        public const string Cancel = "requests.cancel";
+    }
+
+    public static class Quotes
+    {
+        public const string Read = "quotes.read";
+        public const string Create = "quotes.create";
+        public const string Update = "quotes.update";
+        public const string Send = "quotes.send";
+        public const string Decide = "quotes.decide";
+    }
+
+    public static class Contracts
+    {
+        public const string Read = "contracts.read";
+        public const string Create = "contracts.create";
+        public const string Update = "contracts.update";
+    }
+
+    public static class Projects
+    {
+        public const string Read = "projects.read";
+        public const string Create = "projects.create";
+        public const string Update = "projects.update";
+    }
+
     public static IReadOnlyList<PermissionDefinition> All { get; } =
     [
         new(Users.Read, "Consultar usuarios", "Usuarios"),
@@ -53,6 +84,21 @@ public static class Permissions
         new(Clients.Create, "Registrar clientes", "Clientes"),
         new(Clients.Update, "Editar clientes y sus direcciones", "Clientes"),
         new(Clients.Deactivate, "Activar o desactivar clientes", "Clientes"),
+        new(ProjectRequests.Read, "Consultar solicitudes de proyecto", "Solicitudes"),
+        new(ProjectRequests.Create, "Registrar solicitudes de proyecto", "Solicitudes"),
+        new(ProjectRequests.Update, "Editar solicitudes de proyecto", "Solicitudes"),
+        new(ProjectRequests.Cancel, "Rechazar o cancelar solicitudes", "Solicitudes"),
+        new(Quotes.Read, "Consultar cotizaciones", "Cotizaciones"),
+        new(Quotes.Create, "Crear cotizaciones", "Cotizaciones"),
+        new(Quotes.Update, "Editar y anular cotizaciones en borrador", "Cotizaciones"),
+        new(Quotes.Send, "Enviar cotizaciones al cliente", "Cotizaciones"),
+        new(Quotes.Decide, "Aceptar o rechazar cotizaciones", "Cotizaciones"),
+        new(Contracts.Read, "Consultar contratos", "Contratos"),
+        new(Contracts.Create, "Generar contratos desde cotizaciones aceptadas", "Contratos"),
+        new(Contracts.Update, "Editar y cambiar el estado de contratos", "Contratos"),
+        new(Projects.Read, "Consultar proyectos", "Proyectos"),
+        new(Projects.Create, "Crear proyectos desde contratos vigentes", "Proyectos"),
+        new(Projects.Update, "Editar proyectos, avance y estado", "Proyectos"),
     ];
 }
 

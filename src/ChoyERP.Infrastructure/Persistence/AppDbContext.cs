@@ -2,6 +2,7 @@ using ChoyERP.Application.Common.Interfaces;
 using ChoyERP.Domain.Common;
 using ChoyERP.Domain.Entities.Auditing;
 using ChoyERP.Domain.Entities.Clients;
+using ChoyERP.Domain.Entities.Contracting;
 using ChoyERP.Domain.Entities.Users;
 using ChoyERP.Domain.Entities.Workers;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +25,16 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Client> Clients => Set<Client>();
 
     public DbSet<ClientAddress> ClientAddresses => Set<ClientAddress>();
+
+    public DbSet<ProjectRequest> ProjectRequests => Set<ProjectRequest>();
+
+    public DbSet<Quote> Quotes => Set<Quote>();
+
+    public DbSet<QuoteItem> QuoteItems => Set<QuoteItem>();
+
+    public DbSet<Contract> Contracts => Set<Contract>();
+
+    public DbSet<Project> Projects => Set<Project>();
 
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 

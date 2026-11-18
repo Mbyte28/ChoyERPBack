@@ -36,6 +36,10 @@ appsettings.Local.json
 logs/
 *.log
 
+## Herramientas locales / asistentes de IA
+.opencode/
+graphify-out/
+
 ## OS
 .DS_Store
 Thumbs.db

@@ -323,3 +323,290 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE TABLE project_requests (
+        id uuid NOT NULL,
+        code character varying(30) NOT NULL,
+        client_id uuid NOT NULL,
+        client_address_id uuid,
+        title character varying(200) NOT NULL,
+        description character varying(2000),
+        project_type character varying(30) NOT NULL,
+        priority character varying(20) NOT NULL,
+        status character varying(20) NOT NULL,
+        requested_at date NOT NULL,
+        responsible_worker_id uuid,
+        notes character varying(2000),
+        created_at timestamp with time zone NOT NULL,
+        updated_at timestamp with time zone NOT NULL,
+        CONSTRAINT pk_project_requests PRIMARY KEY (id),
+        CONSTRAINT fk_project_requests_client_addresses_client_address_id FOREIGN KEY (client_address_id) REFERENCES client_addresses (id) ON DELETE SET NULL,
+        CONSTRAINT fk_project_requests_clients_client_id FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE RESTRICT,
+        CONSTRAINT fk_project_requests_workers_responsible_worker_id FOREIGN KEY (responsible_worker_id) REFERENCES workers (id) ON DELETE SET NULL
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE TABLE quotes (
+        id uuid NOT NULL,
+        code character varying(30) NOT NULL,
+        project_request_id uuid NOT NULL,
+        version integer NOT NULL,
+        status character varying(20) NOT NULL,
+        currency character varying(3) NOT NULL,
+        tax_rate numeric(5,4) NOT NULL,
+        subtotal numeric(18,2) NOT NULL,
+        tax_amount numeric(18,2) NOT NULL,
+        total numeric(18,2) NOT NULL,
+        valid_until date,
+        notes character varying(2000),
+        decision_notes character varying(1000),
+        sent_at timestamp with time zone,
+        accepted_at timestamp with time zone,
+        rejected_at timestamp with time zone,
+        created_at timestamp with time zone NOT NULL,
+        updated_at timestamp with time zone NOT NULL,
+        CONSTRAINT pk_quotes PRIMARY KEY (id),
+        CONSTRAINT fk_quotes_project_requests_project_request_id FOREIGN KEY (project_request_id) REFERENCES project_requests (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE TABLE contracts (
+        id uuid NOT NULL,
+        code character varying(30) NOT NULL,
+        quote_id uuid NOT NULL,
+        client_id uuid NOT NULL,
+        status character varying(20) NOT NULL,
+        amount numeric(18,2) NOT NULL,
+        currency character varying(3) NOT NULL,
+        signed_at date,
+        start_date date,
+        end_date date,
+        notes character varying(2000),
+        created_at timestamp with time zone NOT NULL,
+        updated_at timestamp with time zone NOT NULL,
+        CONSTRAINT pk_contracts PRIMARY KEY (id),
+        CONSTRAINT fk_contracts_clients_client_id FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE RESTRICT,
+        CONSTRAINT fk_contracts_quotes_quote_id FOREIGN KEY (quote_id) REFERENCES quotes (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE TABLE quote_items (
+        id uuid NOT NULL,
+        quote_id uuid NOT NULL,
+        description character varying(500) NOT NULL,
+        unit character varying(20),
+        sort_order integer NOT NULL,
+        quantity numeric(18,3) NOT NULL,
+        unit_price numeric(18,2) NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        updated_at timestamp with time zone NOT NULL,
+        CONSTRAINT pk_quote_items PRIMARY KEY (id),
+        CONSTRAINT ck_quote_items_quantity CHECK (quantity > 0),
+        CONSTRAINT fk_quote_items_quotes_quote_id FOREIGN KEY (quote_id) REFERENCES quotes (id) ON DELETE CASCADE
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE TABLE projects (
+        id uuid NOT NULL,
+        code character varying(30) NOT NULL,
+        contract_id uuid NOT NULL,
+        client_id uuid NOT NULL,
+        client_address_id uuid,
+        location character varying(300),
+        name character varying(200) NOT NULL,
+        description character varying(2000),
+        status character varying(20) NOT NULL,
+        progress_percent integer NOT NULL,
+        start_date date,
+        expected_end_date date,
+        actual_end_date date,
+        responsible_worker_id uuid,
+        notes character varying(2000),
+        created_at timestamp with time zone NOT NULL,
+        updated_at timestamp with time zone NOT NULL,
+        CONSTRAINT pk_projects PRIMARY KEY (id),
+        CONSTRAINT ck_projects_progress CHECK (progress_percent BETWEEN 0 AND 100),
+        CONSTRAINT fk_projects_client_addresses_client_address_id FOREIGN KEY (client_address_id) REFERENCES client_addresses (id) ON DELETE SET NULL,
+        CONSTRAINT fk_projects_clients_client_id FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE RESTRICT,
+        CONSTRAINT fk_projects_contracts_contract_id FOREIGN KEY (contract_id) REFERENCES contracts (id) ON DELETE RESTRICT,
+        CONSTRAINT fk_projects_workers_responsible_worker_id FOREIGN KEY (responsible_worker_id) REFERENCES workers (id) ON DELETE SET NULL
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE INDEX ix_contracts_client_id ON contracts (client_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE UNIQUE INDEX ix_contracts_code ON contracts (code);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE UNIQUE INDEX ix_contracts_quote_id ON contracts (quote_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE INDEX ix_contracts_status ON contracts (status);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE INDEX ix_project_requests_client_address_id ON project_requests (client_address_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE INDEX ix_project_requests_client_id ON project_requests (client_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE UNIQUE INDEX ix_project_requests_code ON project_requests (code);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE INDEX ix_project_requests_requested_at ON project_requests (requested_at);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE INDEX ix_project_requests_responsible_worker_id ON project_requests (responsible_worker_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE INDEX ix_project_requests_status ON project_requests (status);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE INDEX ix_projects_client_address_id ON projects (client_address_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE INDEX ix_projects_client_id ON projects (client_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE UNIQUE INDEX ix_projects_code ON projects (code);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE UNIQUE INDEX ix_projects_contract_id ON projects (contract_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE INDEX ix_projects_responsible_worker_id ON projects (responsible_worker_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE INDEX ix_projects_status ON projects (status);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE INDEX ix_quote_items_quote_id ON quote_items (quote_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE UNIQUE INDEX ix_quotes_code ON quotes (code);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE UNIQUE INDEX ix_quotes_project_request_id_version ON quotes (project_request_id, version);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE INDEX ix_quotes_status ON quotes (status);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    CREATE INDEX ix_quotes_valid_until ON quotes (valid_until);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261117041944_AddContractingModule') THEN
+    INSERT INTO "__EFMigrationsHistory" (migration_id, product_version)
+    VALUES ('20261117041944_AddContractingModule', '10.0.15');
+    END IF;
+END $EF$;
+COMMIT;
+
