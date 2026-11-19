@@ -319,10 +319,11 @@ public sealed class InstallationService(
     {
         var installation = await GetInstallationOrThrowAsync(id, cancellationToken);
 
-        if (installation.Status is InstallationStatus.Completed or InstallationStatus.Cancelled)
+        if (installation.Status != InstallationStatus.InProgress)
         {
             throw new ConflictException(
-                $"La instalación está en estado '{installation.Status}' y no se puede completar.");
+                $"La instalación está en estado '{installation.Status}' y no se puede completar. "
+                + "Iníciela primero para registrar la fecha de inicio.");
         }
 
         var today = SalesSupport.Today(clock);

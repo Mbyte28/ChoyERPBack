@@ -319,6 +319,14 @@ public sealed class InstallationServiceTests
                 new DateOnly(2026, 11, 11), null, null),
             CancellationToken.None);
 
+        var notStarted = await Assert.ThrowsAsync<ConflictException>(() =>
+            installations.CompleteAsync(
+                installation.Id,
+                new CompleteInstallationRequest(null, null),
+                CancellationToken.None));
+
+        Assert.Contains("Iníciela primero", notStarted.Message);
+
         var started = await installations.StartAsync(
             installation.Id,
             new StartInstallationRequest(null),

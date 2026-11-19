@@ -485,6 +485,8 @@ Reglas del flujo:
   cliente y el técnico debe ser un trabajador activo.
 - Ciclo de vida: `Scheduled → InProgress → Completed`, y
   `Scheduled`/`InProgress → Cancelled`.
+- Una instalación debe **iniciarse antes de completarse**; cerrar una
+  instalación programada sin fecha de inicio devuelve `409`.
 - Las fechas de inicio y fin no pueden ser futuras, y el fin no puede ser
   anterior al inicio.
 - Completar la instalación de una venta ya **entregada** cierra la venta
