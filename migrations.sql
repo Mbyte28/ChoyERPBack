@@ -979,3 +979,132 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119024846_AddEquipmentModule') THEN
+    CREATE TABLE installed_equipment (
+        id uuid NOT NULL,
+        code character varying(30) NOT NULL,
+        client_id uuid NOT NULL,
+        installation_id uuid NOT NULL,
+        inventory_item_id uuid NOT NULL,
+        name character varying(200) NOT NULL,
+        serial_number character varying(100),
+        brand character varying(100),
+        model character varying(100),
+        location character varying(300),
+        installed_date date NOT NULL,
+        warranty_end_date date,
+        status character varying(20) NOT NULL,
+        notes character varying(2000),
+        created_at timestamp with time zone NOT NULL,
+        updated_at timestamp with time zone NOT NULL,
+        CONSTRAINT pk_installed_equipment PRIMARY KEY (id),
+        CONSTRAINT ck_installed_equipment_warranty CHECK (warranty_end_date IS NULL OR warranty_end_date >= installed_date),
+        CONSTRAINT fk_installed_equipment_clients_client_id FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE RESTRICT,
+        CONSTRAINT fk_installed_equipment_installations_installation_id FOREIGN KEY (installation_id) REFERENCES installations (id) ON DELETE RESTRICT,
+        CONSTRAINT fk_installed_equipment_inventory_items_inventory_item_id FOREIGN KEY (inventory_item_id) REFERENCES inventory_items (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119024846_AddEquipmentModule') THEN
+    CREATE TABLE equipment_status_changes (
+        id uuid NOT NULL,
+        equipment_id uuid NOT NULL,
+        from_status character varying(20),
+        to_status character varying(20) NOT NULL,
+        changed_date date NOT NULL,
+        reason character varying(500) NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        updated_at timestamp with time zone NOT NULL,
+        CONSTRAINT pk_equipment_status_changes PRIMARY KEY (id),
+        CONSTRAINT ck_equipment_status_changes_transition CHECK (from_status IS NULL OR from_status <> to_status),
+        CONSTRAINT fk_equipment_status_changes_installed_equipment_equipment_id FOREIGN KEY (equipment_id) REFERENCES installed_equipment (id) ON DELETE CASCADE
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119024846_AddEquipmentModule') THEN
+    CREATE INDEX ix_equipment_status_changes_changed_date ON equipment_status_changes (changed_date);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119024846_AddEquipmentModule') THEN
+    CREATE INDEX ix_equipment_status_changes_equipment_id ON equipment_status_changes (equipment_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119024846_AddEquipmentModule') THEN
+    CREATE INDEX ix_installed_equipment_client_id ON installed_equipment (client_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119024846_AddEquipmentModule') THEN
+    CREATE UNIQUE INDEX ix_installed_equipment_code ON installed_equipment (code);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119024846_AddEquipmentModule') THEN
+    CREATE INDEX ix_installed_equipment_installation_id ON installed_equipment (installation_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119024846_AddEquipmentModule') THEN
+    CREATE INDEX ix_installed_equipment_installed_date ON installed_equipment (installed_date);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119024846_AddEquipmentModule') THEN
+    CREATE INDEX ix_installed_equipment_inventory_item_id ON installed_equipment (inventory_item_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119024846_AddEquipmentModule') THEN
+    CREATE UNIQUE INDEX ix_installed_equipment_inventory_item_id_serial_number ON installed_equipment (inventory_item_id, serial_number);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119024846_AddEquipmentModule') THEN
+    CREATE INDEX ix_installed_equipment_status ON installed_equipment (status);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119024846_AddEquipmentModule') THEN
+    CREATE INDEX ix_installed_equipment_warranty_end_date ON installed_equipment (warranty_end_date);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119024846_AddEquipmentModule') THEN
+    INSERT INTO "__EFMigrationsHistory" (migration_id, product_version)
+    VALUES ('20261119024846_AddEquipmentModule', '10.0.15');
+    END IF;
+END $EF$;
+COMMIT;
+

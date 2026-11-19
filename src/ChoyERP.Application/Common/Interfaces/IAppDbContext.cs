@@ -1,6 +1,7 @@
 using ChoyERP.Domain.Entities.Auditing;
 using ChoyERP.Domain.Entities.Clients;
 using ChoyERP.Domain.Entities.Contracting;
+using ChoyERP.Domain.Entities.Equipment;
 using ChoyERP.Domain.Entities.Installations;
 using ChoyERP.Domain.Entities.Inventory;
 using ChoyERP.Domain.Entities.Sales;
@@ -48,6 +49,10 @@ public interface IAppDbContext
     DbSet<SaleItem> SaleItems { get; }
 
     DbSet<Installation> Installations { get; }
+
+    DbSet<InstalledEquipment> InstalledEquipment { get; }
+
+    DbSet<EquipmentStatusChange> EquipmentStatusChanges { get; }
 
     DbSet<AuditLog> AuditLogs { get; }
 

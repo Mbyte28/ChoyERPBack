@@ -51,6 +51,9 @@ public static class RoleCatalog
                 Permissions.Installations.Read,
                 Permissions.Installations.Create,
                 Permissions.Installations.Update,
+                Permissions.Equipment.Read,
+                Permissions.Equipment.Create,
+                Permissions.Equipment.Update,
             ]),
         new(
             RoleNames.Engineering,
@@ -66,6 +69,9 @@ public static class RoleCatalog
                 Permissions.Inventory.Read,
                 Permissions.Sales.Read,
                 Permissions.Installations.Read,
+                Permissions.Equipment.Read,
+                Permissions.Equipment.Update,
+                Permissions.Equipment.ChangeStatus,
             ]),
         new(
             RoleNames.Warehouse,
@@ -81,6 +87,7 @@ public static class RoleCatalog
                 Permissions.Sales.Read,
                 Permissions.Sales.Deliver,
                 Permissions.Installations.Read,
+                Permissions.Equipment.Read,
             ]),
         new(
             RoleNames.Technician,
@@ -94,6 +101,9 @@ public static class RoleCatalog
                 Permissions.Installations.Read,
                 Permissions.Installations.Update,
                 Permissions.Installations.Complete,
+                Permissions.Equipment.Read,
+                Permissions.Equipment.Update,
+                Permissions.Equipment.ChangeStatus,
             ]),
     ];
 }

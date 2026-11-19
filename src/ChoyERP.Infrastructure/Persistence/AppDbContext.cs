@@ -3,6 +3,7 @@ using ChoyERP.Domain.Common;
 using ChoyERP.Domain.Entities.Auditing;
 using ChoyERP.Domain.Entities.Clients;
 using ChoyERP.Domain.Entities.Contracting;
+using ChoyERP.Domain.Entities.Equipment;
 using ChoyERP.Domain.Entities.Installations;
 using ChoyERP.Domain.Entities.Inventory;
 using ChoyERP.Domain.Entities.Sales;
@@ -48,6 +49,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<SaleItem> SaleItems => Set<SaleItem>();
 
     public DbSet<Installation> Installations => Set<Installation>();
+
+    public DbSet<InstalledEquipment> InstalledEquipment => Set<InstalledEquipment>();
+
+    public DbSet<EquipmentStatusChange> EquipmentStatusChanges => Set<EquipmentStatusChange>();
 
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 

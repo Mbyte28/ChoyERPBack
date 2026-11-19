@@ -96,6 +96,14 @@ public static class Permissions
         public const string Cancel = "installations.cancel";
     }
 
+    public static class Equipment
+    {
+        public const string Read = "equipment.read";
+        public const string Create = "equipment.create";
+        public const string Update = "equipment.update";
+        public const string ChangeStatus = "equipment.change_status";
+    }
+
     public static IReadOnlyList<PermissionDefinition> All { get; } =
     [
         new(Users.Read, "Consultar usuarios", "Usuarios"),
@@ -145,6 +153,10 @@ public static class Permissions
         new(Installations.Update, "Editar instalaciones y asignar técnicos", "Instalaciones"),
         new(Installations.Complete, "Iniciar y completar instalaciones", "Instalaciones"),
         new(Installations.Cancel, "Anular instalaciones pendientes", "Instalaciones"),
+        new(Equipment.Read, "Consultar equipos instalados y su historial", "Equipos"),
+        new(Equipment.Create, "Registrar equipos instalados", "Equipos"),
+        new(Equipment.Update, "Editar la ficha de un equipo instalado", "Equipos"),
+        new(Equipment.ChangeStatus, "Cambiar el estado operativo de un equipo", "Equipos"),
     ];
 }
 

@@ -686,6 +686,174 @@ namespace ChoyERP.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ChoyERP.Domain.Entities.Equipment.EquipmentStatusChange", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly>("ChangedDate")
+                        .HasColumnType("date")
+                        .HasColumnName("changed_date");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("EquipmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("equipment_id");
+
+                    b.Property<string>("FromStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("from_status");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("ToStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("to_status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_equipment_status_changes");
+
+                    b.HasIndex("ChangedDate")
+                        .HasDatabaseName("ix_equipment_status_changes_changed_date");
+
+                    b.HasIndex("EquipmentId")
+                        .HasDatabaseName("ix_equipment_status_changes_equipment_id");
+
+                    b.ToTable("equipment_status_changes", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_equipment_status_changes_transition", "from_status IS NULL OR from_status <> to_status");
+                        });
+                });
+
+            modelBuilder.Entity("ChoyERP.Domain.Entities.Equipment.InstalledEquipment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Brand")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("brand");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("client_id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("InstallationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("installation_id");
+
+                    b.Property<DateOnly>("InstalledDate")
+                        .HasColumnType("date")
+                        .HasColumnName("installed_date");
+
+                    b.Property<Guid>("InventoryItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("inventory_item_id");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("location");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("model");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("SerialNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("serial_number");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<DateOnly?>("WarrantyEndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("warranty_end_date");
+
+                    b.HasKey("Id")
+                        .HasName("pk_installed_equipment");
+
+                    b.HasIndex("ClientId")
+                        .HasDatabaseName("ix_installed_equipment_client_id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_installed_equipment_code");
+
+                    b.HasIndex("InstallationId")
+                        .HasDatabaseName("ix_installed_equipment_installation_id");
+
+                    b.HasIndex("InstalledDate")
+                        .HasDatabaseName("ix_installed_equipment_installed_date");
+
+                    b.HasIndex("InventoryItemId")
+                        .HasDatabaseName("ix_installed_equipment_inventory_item_id");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_installed_equipment_status");
+
+                    b.HasIndex("WarrantyEndDate")
+                        .HasDatabaseName("ix_installed_equipment_warranty_end_date");
+
+                    b.HasIndex("InventoryItemId", "SerialNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_installed_equipment_inventory_item_id_serial_number");
+
+                    b.ToTable("installed_equipment", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_installed_equipment_warranty", "warranty_end_date IS NULL OR warranty_end_date >= installed_date");
+                        });
+                });
+
             modelBuilder.Entity("ChoyERP.Domain.Entities.Installations.Installation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1694,6 +1862,48 @@ namespace ChoyERP.Infrastructure.Persistence.Migrations
                     b.Navigation("Quote");
                 });
 
+            modelBuilder.Entity("ChoyERP.Domain.Entities.Equipment.EquipmentStatusChange", b =>
+                {
+                    b.HasOne("ChoyERP.Domain.Entities.Equipment.InstalledEquipment", "Equipment")
+                        .WithMany("StatusHistory")
+                        .HasForeignKey("EquipmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_equipment_status_changes_installed_equipment_equipment_id");
+
+                    b.Navigation("Equipment");
+                });
+
+            modelBuilder.Entity("ChoyERP.Domain.Entities.Equipment.InstalledEquipment", b =>
+                {
+                    b.HasOne("ChoyERP.Domain.Entities.Clients.Client", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_installed_equipment_clients_client_id");
+
+                    b.HasOne("ChoyERP.Domain.Entities.Installations.Installation", "Installation")
+                        .WithMany()
+                        .HasForeignKey("InstallationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_installed_equipment_installations_installation_id");
+
+                    b.HasOne("ChoyERP.Domain.Entities.Inventory.InventoryItem", "InventoryItem")
+                        .WithMany()
+                        .HasForeignKey("InventoryItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_installed_equipment_inventory_items_inventory_item_id");
+
+                    b.Navigation("Client");
+
+                    b.Navigation("Installation");
+
+                    b.Navigation("InventoryItem");
+                });
+
             modelBuilder.Entity("ChoyERP.Domain.Entities.Installations.Installation", b =>
                 {
                     b.HasOne("ChoyERP.Domain.Entities.Clients.ClientAddress", "ClientAddress")
@@ -1892,6 +2102,11 @@ namespace ChoyERP.Infrastructure.Persistence.Migrations
                     b.Navigation("Contract");
 
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("ChoyERP.Domain.Entities.Equipment.InstalledEquipment", b =>
+                {
+                    b.Navigation("StatusHistory");
                 });
 
             modelBuilder.Entity("ChoyERP.Domain.Entities.Inventory.InventoryItem", b =>

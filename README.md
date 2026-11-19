@@ -1,8 +1,8 @@
 # ChoyERP — Backend
 
 Backend interno del ERP de CHOY. Implementa la **Fase 1**, el módulo de
-**Contrataciones**, el módulo de **Almacén** y el de **Ventas e
-instalaciones** definidos en
+**Contrataciones**, el de **Almacén**, el de **Ventas e instalaciones** y el de
+**Equipos instalados y su seguimiento** definidos en
 [`ERP_CHOY_Especificacion_Backend.md`](ERP_CHOY_Especificacion_Backend.md):
 
 - Estructura base de la solución y manejo consistente de errores.
@@ -14,11 +14,12 @@ instalaciones** definidos en
 - Almacén: artículos, existencias, entradas, salidas, ajustes y kardex.
 - Ventas de equipos con descuento de stock al confirmar.
 - Instalaciones derivadas de una venta o de un proyecto.
+- Equipos instalados con su ficha técnica e historial de estados operativos.
 - Documentación OpenAPI / Swagger UI.
 - Migraciones de base de datos y seed inicial.
 
-> **Estado:** Fase 1, Contrataciones, Almacén y Ventas. Los módulos de
-> ingeniería, seguimiento de equipos y mantenimiento se incorporarán en las
+> **Estado:** Fase 1, Contrataciones, Almacén, Ventas e instalaciones y Equipos
+> instalados. Los módulos de ingeniería y mantenimiento se incorporarán en las
 > siguientes fases sobre esta misma estructura.
 
 ---
@@ -67,10 +68,10 @@ ChoyERP.Api ──────────────► ChoyERP.Infrastructure
 ```
 src/
   ChoyERP.Domain/
-    Entities/{Users,Workers,Clients,Contracting,Inventory,Sales,Installations,Auditing}
+    Entities/{Users,Workers,Clients,Contracting,Inventory,Sales,Installations,Equipment,Auditing}
   ChoyERP.Application/
     Common/{Exceptions,Extensions,Interfaces,Models,Security}
-    Features/{Auth,Users,Roles,Workers,Clients,Contracting,Inventory,Sales,Installations}
+    Features/{Auth,Users,Roles,Workers,Clients,Contracting,Inventory,Sales,Installations,Equipment}
   ChoyERP.Infrastructure/
     Persistence/{Configurations,Migrations,Seed}
     Identity/  Auditing/
@@ -194,14 +195,17 @@ deja las claves sensibles vacías a propósito.
 | Almacén | `inventory.read`, `inventory.create`, `inventory.update`, `inventory.deactivate`, `inventory.move` |
 | Ventas | `sales.read`, `sales.create`, `sales.update`, `sales.confirm`, `sales.deliver`, `sales.complete`, `sales.cancel` |
 | Instalaciones | `installations.read`, `installations.create`, `installations.update`, `installations.complete`, `installations.cancel` |
+| Equipos instalados | `equipment.read`, `equipment.create`, `equipment.update`, `equipment.change_status` |
 
 `Administrador` recibe todos los permisos al sembrarse. `Comercial` recibe el
-flujo completo de contrataciones y de ventas (registro, confirmación y cierre);
-`Ingeniería` consulta solicitudes, cotizaciones, contratos, proyectos, almacén,
-ventas e instalaciones, y actualiza proyectos; `Almacenero` gestiona el catálogo
-y los movimientos de inventario y registra la entrega de ventas; `Técnico`
-consulta proyectos, existencias y ventas, y edita, inicia y completa
-instalaciones.
+flujo completo de contrataciones y de ventas (registro, confirmación y cierre) y
+registra los equipos instalados; `Ingeniería` consulta solicitudes, cotizaciones,
+contratos, proyectos, almacén, ventas e instalaciones, actualiza proyectos y
+equipos, y cambia el estado operativo de los equipos; `Almacenero` gestiona el
+catálogo y los movimientos de inventario, registra la entrega de ventas y
+consulta los equipos; `Técnico` consulta proyectos, existencias y ventas, y
+edita, inicia y completa instalaciones, además de editar equipos y cambiar su
+estado.
 
 > Al incorporar permisos nuevos, vuelva a ejecutar el seed (`Seed:Enabled=true`)
 > una vez para registrarlos y asignarlos a los roles del sistema.
@@ -497,6 +501,47 @@ Reglas del flujo:
 |---|---|
 | Estado de instalación | `Scheduled`, `InProgress`, `Completed`, `Cancelled` |
 
+### Equipos instalados
+
+Equipos entregados e instalados en el cliente, con su identidad física (serie,
+marca y modelo) y el seguimiento de su estado operativo. Los códigos se generan
+automáticamente con el prefijo `EQP-`.
+
+| Método | Ruta | Permiso |
+|---|---|---|
+| GET | `/api/equipment` | `equipment.read` |
+| GET | `/api/equipment/{id}` | `equipment.read` |
+| GET | `/api/equipment/{id}/history` | `equipment.read` |
+| POST | `/api/equipment` | `equipment.create` |
+| PUT | `/api/equipment/{id}` | `equipment.update` |
+| POST | `/api/equipment/{id}/status` | `equipment.change_status` |
+
+Reglas del flujo:
+
+- Un equipo solo se registra sobre una **instalación completada**. El cliente
+  se hereda de la instalación y la fecha de instalación, si no se envía, se
+  toma de la fecha de cierre de la instalación.
+- El artículo debe estar activo y representa el modelo del equipo. Si no se
+  envían `name`, `brand` o `model`, se heredan del artículo (`name` incluye el
+  modelo cuando existe).
+- El número de serie es opcional, se normaliza a mayúsculas y es **único por
+  artículo**; el mismo número puede repetirse en artículos distintos.
+- El equipo nace en estado `Operational` y el registro inicial queda en el
+  historial con `fromStatus` nulo.
+- Cada cambio de estado exige un motivo, no puede repetir el estado actual ni
+  usar una fecha futura o anterior a la instalación.
+- La ficha (nombre, serie, marca, modelo, ubicación, garantía y notas) se puede
+  editar mientras el equipo no esté dado de baja. El fin de garantía no puede
+  ser anterior a la fecha de instalación.
+- `Retired` es un estado **terminal**: un equipo dado de baja no admite más
+  cambios de estado ni edición de su ficha.
+- El historial devuelve los cambios del más reciente al más antiguo e incluye
+  el estado anterior, el nuevo, la fecha y el motivo.
+
+| Catálogo | Valores |
+|---|---|
+| Estado de equipo | `Operational`, `UnderMaintenance`, `OutOfService`, `Retired` |
+
 ### Listados
 
 Los listados aceptan `page` (1..n), `pageSize` (máx. 100), `search`,
@@ -525,6 +570,7 @@ Ordenamientos admitidos:
 - Movimientos: `movementDate` (por defecto), `code`, `type`, `quantity`, `createdAt`
 - Ventas: `createdAt` (por defecto), `code`, `saleDate`, `status`, `total`, `clientName`
 - Instalaciones: `scheduledDate` (por defecto), `code`, `status`, `clientName`, `createdAt`
+- Equipos: `installedDate` (por defecto), `code`, `name`, `status`, `warrantyEndDate`, `clientName`, `createdAt`
 
 Además, los listados aceptan filtros específicos:
 
@@ -538,6 +584,11 @@ Además, los listados aceptan filtros específicos:
 | Movimientos | `itemId`, `type`, `projectId`, `fromDate`, `toDate` |
 | Ventas | `status`, `clientId`, `projectId`, `fromDate`, `toDate` (por fecha de venta) |
 | Instalaciones | `status`, `clientId`, `saleId`, `projectId`, `technicianWorkerId`, `fromDate`, `toDate` (por fecha programada) |
+| Equipos | `status`, `clientId`, `installationId`, `inventoryItemId`, `underWarranty`, `fromDate`, `toDate` (por fecha de instalación) |
+
+En equipos, `search` cubre código, nombre, número de serie, ubicación, cliente,
+instalación y artículo; `underWarranty=true` devuelve solo equipos con garantía
+vigente y `false` los vencidos o sin garantía.
 
 ---
 
@@ -549,7 +600,7 @@ Esquema en `snake_case` generado con migraciones de EF Core:
 `refresh_tokens`, `workers`, `clients`, `client_addresses`, `audit_logs`,
 `project_requests`, `quotes`, `quote_items`, `contracts`, `projects`,
 `inventory_items`, `inventory_movements`, `sales`, `sale_items`,
-`installations`.
+`installations`, `installed_equipment`, `equipment_status_changes`.
 
 ### Comandos
 
@@ -586,19 +637,26 @@ ejecutar `dotnet ef`.
 - Documento de trabajador y código/RUC de cliente únicos.
 - Una cuenta por trabajador (índice único en `users.worker_id`).
 - Códigos de solicitud, cotización, contrato, proyecto, artículo y movimiento únicos.
-- Códigos de venta (`VEN-`) e instalación (`INS-`) únicos.
+- Códigos de venta (`VEN-`), instalación (`INS-`) y equipo (`EQP-`) únicos.
 - Una sola cotización en borrador por solicitud y una sola aceptada.
 - Un solo contrato por cotización y un solo proyecto por contrato.
 - Una sola instalación por venta y una sola por proyecto; el *check constraint*
   `ck_installations_origin` exige exactamente un origen (venta **o** proyecto).
+- Un número de serie único por artículo (`inventory_item_id`, `serial_number`);
+  el mismo serial puede existir en artículos distintos.
+- La garantía de un equipo no vence antes de su instalación
+  (`ck_installed_equipment_warranty`) y el historial no admite transiciones al
+  mismo estado (`ck_equipment_status_changes_transition`).
 - Importes y cantidades validados en API y protegidos con *check constraints*
   en PostgreSQL (`quantity > 0`, avance entre 0 y 100, tasa de impuesto entre
   0 y 1, importes de venta no negativos).
 - Existencia, stock mínimo y costo promedio no negativos; cada movimiento es
   coherente con su kardex (`stock_before`/`stock_after`).
 - Borrado en cascada de sesiones, líneas de cotización, líneas de venta,
-  movimientos de almacén y relaciones rol/permiso. El proyecto o la venta
-  asociados a un movimiento se conservan con `ON DELETE SET NULL`.
+  movimientos de almacén, historial de estados de equipos y relaciones
+  rol/permiso. El proyecto o la venta asociados a un movimiento se conservan con
+  `ON DELETE SET NULL`; el cliente, la instalación y el artículo de un equipo se
+  conservan con `ON DELETE RESTRICT`.
 - Desactivar un trabajador con cuenta activa devuelve `409`.
 - Desactivar un artículo con existencia devuelve `409`.
 
@@ -629,6 +687,7 @@ Se registran en `audit_logs` los eventos relevantes sin datos sensibles:
   `sales.completed`, `sales.cancelled`
 - `installations.created`, `installations.updated`, `installations.started`,
   `installations.completed`, `installations.cancelled`
+- `equipment.created`, `equipment.updated`, `equipment.status_changed`
 
 Cada registro incluye usuario, correo, IP, user agent, entidad afectada y
 detalle. Los intentos fallidos de login también se registran.
@@ -641,7 +700,7 @@ detalle. Los intentos fallidos de login también se registran.
 dotnet test
 ```
 
-Cobertura actual (63 pruebas):
+Cobertura actual (71 pruebas):
 
 - Política de contraseñas, BCrypt y hash de tokens.
 - Login correcto/incorrecto/cuenta desactivada.
@@ -666,6 +725,12 @@ Cobertura actual (63 pruebas):
   proyecto, herencia de nombre y ubicación, asignación de técnicos activos,
   flujo programada → en curso → completada, cierre automático de la venta
   entregada y bloqueo de edición o anulación en estados finales.
+- Equipos instalados: registro solo sobre instalaciones completadas, herencia
+  de cliente, fecha, nombre, marca y modelo, normalización y unicidad de serie
+  por artículo, fechas de instalación y garantía, edición de la ficha,
+  historial inicial y de cambios de estado, bloqueo del estado repetido y del
+  estado terminal `Retired`, filtros por estado, cliente, instalación, artículo,
+  garantía y fechas, y validaciones de los DTOs.
 
 ---
 
@@ -707,13 +772,18 @@ Cobertura actual (63 pruebas):
     de un proyecto, nunca de ambos, y se refuerza con validación en el servicio
     y un *check constraint*. Completarla cierra la venta entregada para no
     dejar ventas abiertas sin trabajo pendiente.
+14. **Equipo instalado como activo trazable.** El equipo guarda una copia de su
+    identidad física (nombre, serie, marca, modelo y ubicación) en lugar de
+    depender del artículo de almacén, que puede cambiar de precio o
+    descripción. El historial de estados es inmutable y `Retired` es terminal
+    para conservar la trazabilidad de la baja.
 
 ### Simplificaciones conocidas
 
 - El código de cliente se autogenera con el patrón `CLI-00001`. En alta
   concurrencia el índice único protege la integridad, pero puede devolver
   `409`; el cliente puede reintentar. Lo mismo aplica a `SOL-`, `COT-`, `CTR-`,
-  `PRY-`, `ART-`, `MOV-`, `VEN-` e `INS-`.
+  `PRY-`, `ART-`, `MOV-`, `VEN-`, `INS-` y `EQP-`.
 - Los roles del sistema no son editables desde la API; se actualizan por
   seed cuando cambia el catálogo de permisos.
 - El catálogo comercial reutiliza los artículos de almacén: no hay un catálogo
@@ -723,6 +793,11 @@ Cobertura actual (63 pruebas):
   stock aún no se descontó, no requiere revertir inventario.
 - El inventario usa costo promedio ponderado; no hay valorización por lote
   ni FIFO.
+- El equipo se registra manualmente sobre una instalación completada; el stock
+  ya se descontó al confirmar la venta, por lo que el registro no genera
+  movimientos adicionales.
+- Un equipo no se elimina: se conserva con su historial y se marca como
+  `Retired` para reflejar la baja.
 - Las salidas concurrentes del mismo artículo pueden competir. El *check
   constraint* impide existencias negativas y la API devuelve `409`, pero aún
   no hay bloqueo optimista explícito (por ejemplo, `xmin`).
@@ -734,6 +809,6 @@ Cobertura actual (63 pruebas):
 ## 11. Siguientes fases
 
 1. Ingeniería y documentación técnica con archivos adjuntos.
-2. Seguimiento de equipos instalados, visitas e inspecciones.
+2. Visitas e inspecciones técnicas de los equipos instalados.
 3. Mantenimiento preventivo y correctivo con órdenes de trabajo.
 4. Endpoint de auditoría, pruebas de integración con Testcontainers y CI/CD.
