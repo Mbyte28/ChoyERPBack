@@ -1,5 +1,6 @@
 using ChoyERP.Domain.Common;
 using ChoyERP.Domain.Entities.Contracting;
+using ChoyERP.Domain.Entities.Sales;
 
 namespace ChoyERP.Domain.Entities.Inventory;
 
@@ -50,6 +51,11 @@ public class InventoryMovement : BaseEntity
     public Guid? ProjectId { get; set; }
 
     public Project? Project { get; set; }
+
+    /// <summary>Venta que originó la salida de equipos, si corresponde.</summary>
+    public Guid? SaleId { get; set; }
+
+    public Sale? Sale { get; set; }
 
     public string? Notes { get; set; }
 }

@@ -1,7 +1,8 @@
 # ChoyERP — Backend
 
 Backend interno del ERP de CHOY. Implementa la **Fase 1**, el módulo de
-**Contrataciones** y el módulo de **Almacén** definidos en
+**Contrataciones**, el módulo de **Almacén** y el de **Ventas e
+instalaciones** definidos en
 [`ERP_CHOY_Especificacion_Backend.md`](ERP_CHOY_Especificacion_Backend.md):
 
 - Estructura base de la solución y manejo consistente de errores.
@@ -11,12 +12,14 @@ Backend interno del ERP de CHOY. Implementa la **Fase 1**, el módulo de
 - Clientes y sus direcciones.
 - Solicitudes, cotizaciones, contratos y proyectos.
 - Almacén: artículos, existencias, entradas, salidas, ajustes y kardex.
+- Ventas de equipos con descuento de stock al confirmar.
+- Instalaciones derivadas de una venta o de un proyecto.
 - Documentación OpenAPI / Swagger UI.
 - Migraciones de base de datos y seed inicial.
 
-> **Estado:** Fase 1, Contrataciones y Almacén. Los módulos de ingeniería,
-> ventas, equipos y mantenimiento se incorporarán en las siguientes fases
-> sobre esta misma estructura.
+> **Estado:** Fase 1, Contrataciones, Almacén y Ventas. Los módulos de
+> ingeniería, seguimiento de equipos y mantenimiento se incorporarán en las
+> siguientes fases sobre esta misma estructura.
 
 ---
 
@@ -64,10 +67,10 @@ ChoyERP.Api ──────────────► ChoyERP.Infrastructure
 ```
 src/
   ChoyERP.Domain/
-    Entities/{Users,Workers,Clients,Contracting,Inventory,Auditing}
+    Entities/{Users,Workers,Clients,Contracting,Inventory,Sales,Installations,Auditing}
   ChoyERP.Application/
     Common/{Exceptions,Extensions,Interfaces,Models,Security}
-    Features/{Auth,Users,Roles,Workers,Clients,Contracting,Inventory}
+    Features/{Auth,Users,Roles,Workers,Clients,Contracting,Inventory,Sales,Installations}
   ChoyERP.Infrastructure/
     Persistence/{Configurations,Migrations,Seed}
     Identity/  Auditing/
@@ -189,12 +192,16 @@ deja las claves sensibles vacías a propósito.
 | Contratos | `contracts.read`, `contracts.create`, `contracts.update` |
 | Proyectos | `projects.read`, `projects.create`, `projects.update` |
 | Almacén | `inventory.read`, `inventory.create`, `inventory.update`, `inventory.deactivate`, `inventory.move` |
+| Ventas | `sales.read`, `sales.create`, `sales.update`, `sales.confirm`, `sales.deliver`, `sales.complete`, `sales.cancel` |
+| Instalaciones | `installations.read`, `installations.create`, `installations.update`, `installations.complete`, `installations.cancel` |
 
 `Administrador` recibe todos los permisos al sembrarse. `Comercial` recibe el
-flujo completo de contrataciones y consulta existencias; `Ingeniería` consulta
-solicitudes, cotizaciones, contratos, proyectos y almacén, y actualiza
-proyectos; `Almacenero` gestiona el catálogo y los movimientos de inventario;
-`Técnico` consulta proyectos y existencias.
+flujo completo de contrataciones y de ventas (registro, confirmación y cierre);
+`Ingeniería` consulta solicitudes, cotizaciones, contratos, proyectos, almacén,
+ventas e instalaciones, y actualiza proyectos; `Almacenero` gestiona el catálogo
+y los movimientos de inventario y registra la entrega de ventas; `Técnico`
+consulta proyectos, existencias y ventas, y edita, inicia y completa
+instalaciones.
 
 > Al incorporar permisos nuevos, vuelva a ejecutar el seed (`Seed:Enabled=true`)
 > una vez para registrarlos y asignarlos a los roles del sistema.
@@ -406,6 +413,88 @@ Reglas del flujo:
 | `unit` | `Unit`, `Kilogram`, `Liter`, `Meter`, `Box`, `Set`, `Other` |
 | `type` (movimiento) | `Entry`, `Exit`, `Adjustment` |
 
+### Ventas de equipos
+
+Venta de artículos del catálogo de almacén a un cliente, opcionalmente
+asociada a un proyecto de ese mismo cliente. Los códigos se generan
+automáticamente con el prefijo `VEN-`.
+
+| Método | Ruta | Permiso |
+|---|---|---|
+| GET | `/api/sales` | `sales.read` |
+| GET | `/api/sales/{id}` | `sales.read` |
+| POST | `/api/sales` | `sales.create` |
+| PUT | `/api/sales/{id}` | `sales.update` |
+| POST | `/api/sales/{id}/confirm` | `sales.confirm` |
+| POST | `/api/sales/{id}/deliver` | `sales.deliver` |
+| POST | `/api/sales/{id}/complete` | `sales.complete` |
+| POST | `/api/sales/{id}/cancel` | `sales.cancel` |
+
+Reglas del flujo:
+
+- Ciclo de vida: `Draft → Confirmed → Delivered → Completed`, y
+  `Draft → Cancelled`.
+- Crear o editar un borrador **no** modifica el stock. Al **confirmar** se
+  valida la disponibilidad de cada artículo y se descuenta el inventario con
+  movimientos `Exit` que guardan `saleId` y `reference = VEN-xxxxx`.
+- Una venta confirmada es **inmutable**: no se puede editar ni anular. Para
+  devolver equipos se registra una entrada de almacén.
+- Los importes se calculan en el servidor: `subtotal` es la suma de las líneas,
+  `taxAmount = subtotal × taxRate` y `total = subtotal + taxAmount`. La tasa de
+  impuesto debe estar entre 0 y 1.
+- Cada línea congela la descripción y la unidad del artículo en el momento de
+  la venta, y no admite artículos repetidos.
+- Se valida que el cliente esté activo, que el proyecto pertenezca al cliente y
+  no esté cancelado, y que las fechas no sean futuras (`saleDate`) ni
+  incoherentes (`expectedDeliveryDate ≥ saleDate`).
+- La entrega solo aplica a ventas confirmadas; `deliveredDate` no puede ser
+  futura ni anterior a `saleDate`.
+- El cierre solo aplica a ventas entregadas y se bloquea mientras la
+  instalación asociada siga `Scheduled` o `InProgress`.
+- La anulación solo aplica a borradores y exige un motivo.
+
+| Catálogo | Valores |
+|---|---|
+| Estado de venta | `Draft`, `Confirmed`, `Delivered`, `Completed`, `Cancelled` |
+
+### Instalaciones
+
+Instalación de los equipos vendidos o de un proyecto de ingeniería. Los
+códigos se generan automáticamente con el prefijo `INS-`.
+
+| Método | Ruta | Permiso |
+|---|---|---|
+| GET | `/api/installations` | `installations.read` |
+| GET | `/api/installations/{id}` | `installations.read` |
+| POST | `/api/installations` | `installations.create` |
+| PUT | `/api/installations/{id}` | `installations.update` |
+| POST | `/api/installations/{id}/start` | `installations.complete` |
+| POST | `/api/installations/{id}/complete` | `installations.complete` |
+| POST | `/api/installations/{id}/cancel` | `installations.cancel` |
+
+Reglas del flujo:
+
+- Una instalación se asocia **exactamente a una venta o a un proyecto**, nunca a
+  ambos. Solo puede existir una instalación por venta y una por proyecto.
+- La venta de origen debe estar `Confirmed` o `Delivered`; el proyecto no puede
+  estar cancelado. El cliente debe estar activo.
+- Si no se envían `name` ni `location`, se heredan del origen (por ejemplo,
+  `Instalación de venta VEN-00001` y la ubicación del proyecto o de la
+  dirección del cliente). El nombre y la ubicación quedan congelados como texto.
+- La dirección y el técnico son opcionales, pero la dirección debe pertenecer al
+  cliente y el técnico debe ser un trabajador activo.
+- Ciclo de vida: `Scheduled → InProgress → Completed`, y
+  `Scheduled`/`InProgress → Cancelled`.
+- Las fechas de inicio y fin no pueden ser futuras, y el fin no puede ser
+  anterior al inicio.
+- Completar la instalación de una venta ya **entregada** cierra la venta
+  automáticamente (`Completed`) y lo registra en auditoría.
+- Una instalación completada o anulada no se puede editar ni volver a anular.
+
+| Catálogo | Valores |
+|---|---|
+| Estado de instalación | `Scheduled`, `InProgress`, `Completed`, `Cancelled` |
+
 ### Listados
 
 Los listados aceptan `page` (1..n), `pageSize` (máx. 100), `search`,
@@ -432,6 +521,8 @@ Ordenamientos admitidos:
 - Proyectos: `createdAt` (por defecto), `code`, `name`, `status`, `progress`, `startDate`
 - Artículos: `name` (por defecto), `code`, `category`, `quantityOnHand`, `minimumStock`, `createdAt`
 - Movimientos: `movementDate` (por defecto), `code`, `type`, `quantity`, `createdAt`
+- Ventas: `createdAt` (por defecto), `code`, `saleDate`, `status`, `total`, `clientName`
+- Instalaciones: `scheduledDate` (por defecto), `code`, `status`, `clientName`, `createdAt`
 
 Además, los listados aceptan filtros específicos:
 
@@ -443,6 +534,8 @@ Además, los listados aceptan filtros específicos:
 | Proyectos | `status`, `clientId`, `contractId`, `responsibleWorkerId` |
 | Artículos | `category`, `unit`, `isActive`, `belowMinimum` |
 | Movimientos | `itemId`, `type`, `projectId`, `fromDate`, `toDate` |
+| Ventas | `status`, `clientId`, `projectId`, `fromDate`, `toDate` (por fecha de venta) |
+| Instalaciones | `status`, `clientId`, `saleId`, `projectId`, `technicianWorkerId`, `fromDate`, `toDate` (por fecha programada) |
 
 ---
 
@@ -453,7 +546,8 @@ Esquema en `snake_case` generado con migraciones de EF Core:
 `users`, `roles`, `permissions`, `user_roles`, `role_permissions`,
 `refresh_tokens`, `workers`, `clients`, `client_addresses`, `audit_logs`,
 `project_requests`, `quotes`, `quote_items`, `contracts`, `projects`,
-`inventory_items`, `inventory_movements`.
+`inventory_items`, `inventory_movements`, `sales`, `sale_items`,
+`installations`.
 
 ### Comandos
 
@@ -490,15 +584,19 @@ ejecutar `dotnet ef`.
 - Documento de trabajador y código/RUC de cliente únicos.
 - Una cuenta por trabajador (índice único en `users.worker_id`).
 - Códigos de solicitud, cotización, contrato, proyecto, artículo y movimiento únicos.
+- Códigos de venta (`VEN-`) e instalación (`INS-`) únicos.
 - Una sola cotización en borrador por solicitud y una sola aceptada.
 - Un solo contrato por cotización y un solo proyecto por contrato.
+- Una sola instalación por venta y una sola por proyecto; el *check constraint*
+  `ck_installations_origin` exige exactamente un origen (venta **o** proyecto).
 - Importes y cantidades validados en API y protegidos con *check constraints*
-  en PostgreSQL (`quantity > 0`, avance entre 0 y 100).
+  en PostgreSQL (`quantity > 0`, avance entre 0 y 100, tasa de impuesto entre
+  0 y 1, importes de venta no negativos).
 - Existencia, stock mínimo y costo promedio no negativos; cada movimiento es
   coherente con su kardex (`stock_before`/`stock_after`).
-- Borrado en cascada de sesiones, líneas de cotización, movimientos de
-  almacén y relaciones rol/permiso. El proyecto asociado a un movimiento se
-  conserva con `ON DELETE SET NULL`.
+- Borrado en cascada de sesiones, líneas de cotización, líneas de venta,
+  movimientos de almacén y relaciones rol/permiso. El proyecto o la venta
+  asociados a un movimiento se conservan con `ON DELETE SET NULL`.
 - Desactivar un trabajador con cuenta activa devuelve `409`.
 - Desactivar un artículo con existencia devuelve `409`.
 
@@ -525,6 +623,10 @@ Se registran en `audit_logs` los eventos relevantes sin datos sensibles:
 - `inventory.items.created`, `inventory.items.updated`,
   `inventory.items.activated`, `inventory.items.deactivated`
 - `inventory.movements.created` (incluye tipo, artículo y existencia resultante)
+- `sales.created`, `sales.updated`, `sales.confirmed`, `sales.delivered`,
+  `sales.completed`, `sales.cancelled`
+- `installations.created`, `installations.updated`, `installations.started`,
+  `installations.completed`, `installations.cancelled`
 
 Cada registro incluye usuario, correo, IP, user agent, entidad afectada y
 detalle. Los intentos fallidos de login también se registran.
@@ -537,7 +639,7 @@ detalle. Los intentos fallidos de login también se registran.
 dotnet test
 ```
 
-Cobertura actual (45 pruebas):
+Cobertura actual (63 pruebas):
 
 - Política de contraseñas, BCrypt y hash de tokens.
 - Login correcto/incorrecto/cuenta desactivada.
@@ -553,6 +655,15 @@ Cobertura actual (45 pruebas):
   físico, bloqueo de desactivación con existencia, movimientos sobre
   artículos inactivos o proyectos cancelados, fechas futuras, cambio de unidad
   con movimientos, filtro de stock mínimo y validaciones de entrada.
+- Ventas: código automático, cálculo de importes, stock intacto en borrador,
+  descuento y movimientos de salida al confirmar, rechazo por stock
+  insuficiente, inmutabilidad tras confirmar, ciclo de entrega y cierre,
+  bloqueo del cierre con instalación pendiente, anulación solo en borrador y
+  filtros por estado, cliente y fechas.
+- Instalaciones: origen exclusivo venta/proyecto, unicidad por venta y
+  proyecto, herencia de nombre y ubicación, asignación de técnicos activos,
+  flujo programada → en curso → completada, cierre automático de la venta
+  entregada y bloqueo de edición o anulación en estados finales.
 
 ---
 
@@ -584,17 +695,30 @@ Cobertura actual (45 pruebas):
 10. **Doble protección de la existencia.** El servicio valida disponibilidad
     antes de guardar y PostgreSQL impide existencias negativas con un *check
     constraint*, incluso ante errores de concurrencia.
+11. **El stock se descuenta al confirmar la venta.** El borrador es un
+    documento comercial sin efectos en almacén; confirmar es el punto de no
+    retorno que descuenta el inventario y genera el kardex asociado (`saleId`).
+12. **Venta confirmada inmutable.** Editar o anular una venta ya confirmada
+    rompería la trazabilidad del stock y de la instalación. Las devoluciones se
+    registran como entradas de almacén.
+13. **Instalación con origen exclusivo.** Una instalación nace de una venta o
+    de un proyecto, nunca de ambos, y se refuerza con validación en el servicio
+    y un *check constraint*. Completarla cierra la venta entregada para no
+    dejar ventas abiertas sin trabajo pendiente.
 
 ### Simplificaciones conocidas
 
 - El código de cliente se autogenera con el patrón `CLI-00001`. En alta
   concurrencia el índice único protege la integridad, pero puede devolver
   `409`; el cliente puede reintentar. Lo mismo aplica a `SOL-`, `COT-`, `CTR-`,
-  `PRY-`, `ART-` y `MOV-`.
+  `PRY-`, `ART-`, `MOV-`, `VEN-` e `INS-`.
 - Los roles del sistema no son editables desde la API; se actualizan por
   seed cuando cambia el catálogo de permisos.
-- El catálogo comercial y su relación con los artículos de almacén se
-  definirán en la fase de ventas.
+- El catálogo comercial reutiliza los artículos de almacén: no hay un catálogo
+  de venta separado. Cada línea congela descripción, unidad y precio, de modo
+  que editar el artículo no altera ventas pasadas.
+- Una venta no se elimina: la anulación solo aplica a borradores y, como el
+  stock aún no se descontó, no requiere revertir inventario.
 - El inventario usa costo promedio ponderado; no hay valorización por lote
   ni FIFO.
 - Las salidas concurrentes del mismo artículo pueden competir. El *check
@@ -608,7 +732,6 @@ Cobertura actual (45 pruebas):
 ## 11. Siguientes fases
 
 1. Ingeniería y documentación técnica con archivos adjuntos.
-2. Ventas de equipos e instalaciones asociadas a clientes y proyectos.
-3. Seguimiento de equipos, visitas e inspecciones.
-4. Mantenimiento preventivo y correctivo con órdenes de trabajo.
-5. Endpoint de auditoría, pruebas de integración con Testcontainers y CI/CD.
+2. Seguimiento de equipos instalados, visitas e inspecciones.
+3. Mantenimiento preventivo y correctivo con órdenes de trabajo.
+4. Endpoint de auditoría, pruebas de integración con Testcontainers y CI/CD.

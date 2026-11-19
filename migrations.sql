@@ -751,3 +751,231 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    ALTER TABLE inventory_movements ADD sale_id uuid;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    CREATE TABLE sales (
+        id uuid NOT NULL,
+        code character varying(30) NOT NULL,
+        client_id uuid NOT NULL,
+        project_id uuid,
+        status character varying(20) NOT NULL,
+        currency character varying(3) NOT NULL,
+        tax_rate numeric(5,4) NOT NULL,
+        subtotal numeric(18,2) NOT NULL,
+        tax_amount numeric(18,2) NOT NULL,
+        total numeric(18,2) NOT NULL,
+        sale_date date NOT NULL,
+        expected_delivery_date date,
+        delivered_date date,
+        confirmed_at timestamp with time zone,
+        completed_at timestamp with time zone,
+        cancelled_at timestamp with time zone,
+        cancellation_reason character varying(500),
+        notes character varying(2000),
+        created_at timestamp with time zone NOT NULL,
+        updated_at timestamp with time zone NOT NULL,
+        CONSTRAINT pk_sales PRIMARY KEY (id),
+        CONSTRAINT ck_sales_subtotal CHECK (subtotal >= 0),
+        CONSTRAINT ck_sales_tax_amount CHECK (tax_amount >= 0),
+        CONSTRAINT ck_sales_tax_rate CHECK (tax_rate >= 0 AND tax_rate <= 1),
+        CONSTRAINT ck_sales_total CHECK (total >= 0),
+        CONSTRAINT fk_sales_clients_client_id FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE RESTRICT,
+        CONSTRAINT fk_sales_projects_project_id FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE SET NULL
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    CREATE TABLE installations (
+        id uuid NOT NULL,
+        code character varying(30) NOT NULL,
+        client_id uuid NOT NULL,
+        sale_id uuid,
+        project_id uuid,
+        client_address_id uuid,
+        location character varying(300),
+        name character varying(200) NOT NULL,
+        description character varying(2000),
+        status character varying(20) NOT NULL,
+        scheduled_date date,
+        started_date date,
+        completed_date date,
+        technician_worker_id uuid,
+        cancellation_reason character varying(500),
+        notes character varying(2000),
+        created_at timestamp with time zone NOT NULL,
+        updated_at timestamp with time zone NOT NULL,
+        CONSTRAINT pk_installations PRIMARY KEY (id),
+        CONSTRAINT ck_installations_origin CHECK ((sale_id IS NULL) <> (project_id IS NULL)),
+        CONSTRAINT fk_installations_client_addresses_client_address_id FOREIGN KEY (client_address_id) REFERENCES client_addresses (id) ON DELETE SET NULL,
+        CONSTRAINT fk_installations_clients_client_id FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE RESTRICT,
+        CONSTRAINT fk_installations_projects_project_id FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE RESTRICT,
+        CONSTRAINT fk_installations_sales_sale_id FOREIGN KEY (sale_id) REFERENCES sales (id) ON DELETE RESTRICT,
+        CONSTRAINT fk_installations_workers_technician_worker_id FOREIGN KEY (technician_worker_id) REFERENCES workers (id) ON DELETE SET NULL
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    CREATE TABLE sale_items (
+        id uuid NOT NULL,
+        sale_id uuid NOT NULL,
+        inventory_item_id uuid NOT NULL,
+        description character varying(500) NOT NULL,
+        unit character varying(20),
+        quantity numeric(18,3) NOT NULL,
+        unit_price numeric(18,2) NOT NULL,
+        sort_order integer NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        updated_at timestamp with time zone NOT NULL,
+        CONSTRAINT pk_sale_items PRIMARY KEY (id),
+        CONSTRAINT ck_sale_items_quantity CHECK (quantity > 0),
+        CONSTRAINT ck_sale_items_unit_price CHECK (unit_price >= 0),
+        CONSTRAINT fk_sale_items_inventory_items_inventory_item_id FOREIGN KEY (inventory_item_id) REFERENCES inventory_items (id) ON DELETE RESTRICT,
+        CONSTRAINT fk_sale_items_sales_sale_id FOREIGN KEY (sale_id) REFERENCES sales (id) ON DELETE CASCADE
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    CREATE INDEX ix_inventory_movements_sale_id ON inventory_movements (sale_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    CREATE INDEX ix_installations_client_address_id ON installations (client_address_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    CREATE INDEX ix_installations_client_id ON installations (client_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    CREATE UNIQUE INDEX ix_installations_code ON installations (code);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    CREATE UNIQUE INDEX ix_installations_project_id ON installations (project_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    CREATE UNIQUE INDEX ix_installations_sale_id ON installations (sale_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    CREATE INDEX ix_installations_scheduled_date ON installations (scheduled_date);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    CREATE INDEX ix_installations_status ON installations (status);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    CREATE INDEX ix_installations_technician_worker_id ON installations (technician_worker_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    CREATE INDEX ix_sale_items_inventory_item_id ON sale_items (inventory_item_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    CREATE INDEX ix_sale_items_sale_id ON sale_items (sale_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    CREATE INDEX ix_sales_client_id ON sales (client_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    CREATE UNIQUE INDEX ix_sales_code ON sales (code);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    CREATE INDEX ix_sales_project_id ON sales (project_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    CREATE INDEX ix_sales_sale_date ON sales (sale_date);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    CREATE INDEX ix_sales_status ON sales (status);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    ALTER TABLE inventory_movements ADD CONSTRAINT fk_inventory_movements_sales_sale_id FOREIGN KEY (sale_id) REFERENCES sales (id) ON DELETE SET NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261119012444_AddSalesModule') THEN
+    INSERT INTO "__EFMigrationsHistory" (migration_id, product_version)
+    VALUES ('20261119012444_AddSalesModule', '10.0.15');
+    END IF;
+END $EF$;
+COMMIT;
+

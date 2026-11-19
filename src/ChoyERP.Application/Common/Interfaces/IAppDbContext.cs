@@ -1,7 +1,9 @@
 using ChoyERP.Domain.Entities.Auditing;
 using ChoyERP.Domain.Entities.Clients;
 using ChoyERP.Domain.Entities.Contracting;
+using ChoyERP.Domain.Entities.Installations;
 using ChoyERP.Domain.Entities.Inventory;
+using ChoyERP.Domain.Entities.Sales;
 using ChoyERP.Domain.Entities.Users;
 using ChoyERP.Domain.Entities.Workers;
 using Microsoft.EntityFrameworkCore;
@@ -40,6 +42,12 @@ public interface IAppDbContext
     DbSet<InventoryItem> InventoryItems { get; }
 
     DbSet<InventoryMovement> InventoryMovements { get; }
+
+    DbSet<Sale> Sales { get; }
+
+    DbSet<SaleItem> SaleItems { get; }
+
+    DbSet<Installation> Installations { get; }
 
     DbSet<AuditLog> AuditLogs { get; }
 

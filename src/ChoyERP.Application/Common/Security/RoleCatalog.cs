@@ -42,6 +42,15 @@ public static class RoleCatalog
                 Permissions.Projects.Read,
                 Permissions.Projects.Create,
                 Permissions.Inventory.Read,
+                Permissions.Sales.Read,
+                Permissions.Sales.Create,
+                Permissions.Sales.Update,
+                Permissions.Sales.Confirm,
+                Permissions.Sales.Complete,
+                Permissions.Sales.Cancel,
+                Permissions.Installations.Read,
+                Permissions.Installations.Create,
+                Permissions.Installations.Update,
             ]),
         new(
             RoleNames.Engineering,
@@ -55,6 +64,8 @@ public static class RoleCatalog
                 Permissions.Projects.Read,
                 Permissions.Projects.Update,
                 Permissions.Inventory.Read,
+                Permissions.Sales.Read,
+                Permissions.Installations.Read,
             ]),
         new(
             RoleNames.Warehouse,
@@ -67,6 +78,9 @@ public static class RoleCatalog
                 Permissions.Inventory.Update,
                 Permissions.Inventory.Deactivate,
                 Permissions.Inventory.Move,
+                Permissions.Sales.Read,
+                Permissions.Sales.Deliver,
+                Permissions.Installations.Read,
             ]),
         new(
             RoleNames.Technician,
@@ -76,6 +90,10 @@ public static class RoleCatalog
                 Permissions.Workers.Read,
                 Permissions.Projects.Read,
                 Permissions.Inventory.Read,
+                Permissions.Sales.Read,
+                Permissions.Installations.Read,
+                Permissions.Installations.Update,
+                Permissions.Installations.Complete,
             ]),
     ];
 }

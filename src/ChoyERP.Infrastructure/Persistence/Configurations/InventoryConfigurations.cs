@@ -77,10 +77,16 @@ public sealed class InventoryMovementConfiguration : IEntityTypeConfiguration<In
         builder.HasIndex(m => m.MovementDate);
         builder.HasIndex(m => new { m.ItemId, m.MovementDate });
         builder.HasIndex(m => m.ProjectId);
+        builder.HasIndex(m => m.SaleId);
 
         builder.HasOne(m => m.Project)
             .WithMany()
             .HasForeignKey(m => m.ProjectId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(m => m.Sale)
+            .WithMany()
+            .HasForeignKey(m => m.SaleId)
             .OnDelete(DeleteBehavior.SetNull);
     }
 }

@@ -686,6 +686,127 @@ namespace ChoyERP.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ChoyERP.Domain.Entities.Installations.Installation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("cancellation_reason");
+
+                    b.Property<Guid?>("ClientAddressId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("client_address_id");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("client_id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("code");
+
+                    b.Property<DateOnly?>("CompletedDate")
+                        .HasColumnType("date")
+                        .HasColumnName("completed_date");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("location");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<Guid?>("SaleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sale_id");
+
+                    b.Property<DateOnly?>("ScheduledDate")
+                        .HasColumnType("date")
+                        .HasColumnName("scheduled_date");
+
+                    b.Property<DateOnly?>("StartedDate")
+                        .HasColumnType("date")
+                        .HasColumnName("started_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid?>("TechnicianWorkerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("technician_worker_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_installations");
+
+                    b.HasIndex("ClientAddressId")
+                        .HasDatabaseName("ix_installations_client_address_id");
+
+                    b.HasIndex("ClientId")
+                        .HasDatabaseName("ix_installations_client_id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_installations_code");
+
+                    b.HasIndex("ProjectId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_installations_project_id");
+
+                    b.HasIndex("SaleId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_installations_sale_id");
+
+                    b.HasIndex("ScheduledDate")
+                        .HasDatabaseName("ix_installations_scheduled_date");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_installations_status");
+
+                    b.HasIndex("TechnicianWorkerId")
+                        .HasDatabaseName("ix_installations_technician_worker_id");
+
+                    b.ToTable("installations", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_installations_origin", "(sale_id IS NULL) <> (project_id IS NULL)");
+                        });
+                });
+
             modelBuilder.Entity("ChoyERP.Domain.Entities.Inventory.InventoryItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -849,6 +970,10 @@ namespace ChoyERP.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("reference");
 
+                    b.Property<Guid?>("SaleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sale_id");
+
                     b.Property<decimal>("StockAfter")
                         .HasPrecision(18, 3)
                         .HasColumnType("numeric(18,3)")
@@ -895,6 +1020,9 @@ namespace ChoyERP.Infrastructure.Persistence.Migrations
                     b.HasIndex("ProjectId")
                         .HasDatabaseName("ix_inventory_movements_project_id");
 
+                    b.HasIndex("SaleId")
+                        .HasDatabaseName("ix_inventory_movements_sale_id");
+
                     b.HasIndex("Type")
                         .HasDatabaseName("ix_inventory_movements_type");
 
@@ -910,6 +1038,197 @@ namespace ChoyERP.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("ck_inventory_movements_stock_before", "stock_before >= 0");
 
                             t.HasCheckConstraint("ck_inventory_movements_unit_cost", "unit_cost >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("ChoyERP.Domain.Entities.Sales.Sale", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("cancellation_reason");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelled_at");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("client_id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTimeOffset?>("ConfirmedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("confirmed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("currency");
+
+                    b.Property<DateOnly?>("DeliveredDate")
+                        .HasColumnType("date")
+                        .HasColumnName("delivered_date");
+
+                    b.Property<DateOnly?>("ExpectedDeliveryDate")
+                        .HasColumnType("date")
+                        .HasColumnName("expected_delivery_date");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<DateOnly>("SaleDate")
+                        .HasColumnType("date")
+                        .HasColumnName("sale_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("subtotal");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("tax_amount");
+
+                    b.Property<decimal>("TaxRate")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("numeric(5,4)")
+                        .HasColumnName("tax_rate");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("total");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sales");
+
+                    b.HasIndex("ClientId")
+                        .HasDatabaseName("ix_sales_client_id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sales_code");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("ix_sales_project_id");
+
+                    b.HasIndex("SaleDate")
+                        .HasDatabaseName("ix_sales_sale_date");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_sales_status");
+
+                    b.ToTable("sales", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_sales_subtotal", "subtotal >= 0");
+
+                            t.HasCheckConstraint("ck_sales_tax_amount", "tax_amount >= 0");
+
+                            t.HasCheckConstraint("ck_sales_tax_rate", "tax_rate >= 0 AND tax_rate <= 1");
+
+                            t.HasCheckConstraint("ck_sales_total", "total >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("ChoyERP.Domain.Entities.Sales.SaleItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<Guid>("InventoryItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("inventory_item_id");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)")
+                        .HasColumnName("quantity");
+
+                    b.Property<Guid>("SaleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sale_id");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<string>("Unit")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("unit");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("unit_price");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sale_items");
+
+                    b.HasIndex("InventoryItemId")
+                        .HasDatabaseName("ix_sale_items_inventory_item_id");
+
+                    b.HasIndex("SaleId")
+                        .HasDatabaseName("ix_sale_items_sale_id");
+
+                    b.ToTable("sale_items", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_sale_items_quantity", "quantity > 0");
+
+                            t.HasCheckConstraint("ck_sale_items_unit_price", "unit_price >= 0");
                         });
                 });
 
@@ -1375,6 +1694,50 @@ namespace ChoyERP.Infrastructure.Persistence.Migrations
                     b.Navigation("Quote");
                 });
 
+            modelBuilder.Entity("ChoyERP.Domain.Entities.Installations.Installation", b =>
+                {
+                    b.HasOne("ChoyERP.Domain.Entities.Clients.ClientAddress", "ClientAddress")
+                        .WithMany()
+                        .HasForeignKey("ClientAddressId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_installations_client_addresses_client_address_id");
+
+                    b.HasOne("ChoyERP.Domain.Entities.Clients.Client", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_installations_clients_client_id");
+
+                    b.HasOne("ChoyERP.Domain.Entities.Contracting.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_installations_projects_project_id");
+
+                    b.HasOne("ChoyERP.Domain.Entities.Sales.Sale", "Sale")
+                        .WithOne("Installation")
+                        .HasForeignKey("ChoyERP.Domain.Entities.Installations.Installation", "SaleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_installations_sales_sale_id");
+
+                    b.HasOne("ChoyERP.Domain.Entities.Workers.Worker", "Technician")
+                        .WithMany()
+                        .HasForeignKey("TechnicianWorkerId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_installations_workers_technician_worker_id");
+
+                    b.Navigation("Client");
+
+                    b.Navigation("ClientAddress");
+
+                    b.Navigation("Project");
+
+                    b.Navigation("Sale");
+
+                    b.Navigation("Technician");
+                });
+
             modelBuilder.Entity("ChoyERP.Domain.Entities.Inventory.InventoryMovement", b =>
                 {
                     b.HasOne("ChoyERP.Domain.Entities.Inventory.InventoryItem", "Item")
@@ -1390,9 +1753,58 @@ namespace ChoyERP.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_inventory_movements_projects_project_id");
 
+                    b.HasOne("ChoyERP.Domain.Entities.Sales.Sale", "Sale")
+                        .WithMany()
+                        .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_inventory_movements_sales_sale_id");
+
                     b.Navigation("Item");
 
                     b.Navigation("Project");
+
+                    b.Navigation("Sale");
+                });
+
+            modelBuilder.Entity("ChoyERP.Domain.Entities.Sales.Sale", b =>
+                {
+                    b.HasOne("ChoyERP.Domain.Entities.Clients.Client", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sales_clients_client_id");
+
+                    b.HasOne("ChoyERP.Domain.Entities.Contracting.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_sales_projects_project_id");
+
+                    b.Navigation("Client");
+
+                    b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("ChoyERP.Domain.Entities.Sales.SaleItem", b =>
+                {
+                    b.HasOne("ChoyERP.Domain.Entities.Inventory.InventoryItem", "InventoryItem")
+                        .WithMany()
+                        .HasForeignKey("InventoryItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sale_items_inventory_items_inventory_item_id");
+
+                    b.HasOne("ChoyERP.Domain.Entities.Sales.Sale", "Sale")
+                        .WithMany("Items")
+                        .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sale_items_sales_sale_id");
+
+                    b.Navigation("InventoryItem");
+
+                    b.Navigation("Sale");
                 });
 
             modelBuilder.Entity("ChoyERP.Domain.Entities.Users.RefreshToken", b =>
@@ -1485,6 +1897,13 @@ namespace ChoyERP.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("ChoyERP.Domain.Entities.Inventory.InventoryItem", b =>
                 {
                     b.Navigation("Movements");
+                });
+
+            modelBuilder.Entity("ChoyERP.Domain.Entities.Sales.Sale", b =>
+                {
+                    b.Navigation("Installation");
+
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("ChoyERP.Domain.Entities.Users.Permission", b =>

@@ -76,6 +76,26 @@ public static class Permissions
         public const string Move = "inventory.move";
     }
 
+    public static class Sales
+    {
+        public const string Read = "sales.read";
+        public const string Create = "sales.create";
+        public const string Update = "sales.update";
+        public const string Confirm = "sales.confirm";
+        public const string Deliver = "sales.deliver";
+        public const string Complete = "sales.complete";
+        public const string Cancel = "sales.cancel";
+    }
+
+    public static class Installations
+    {
+        public const string Read = "installations.read";
+        public const string Create = "installations.create";
+        public const string Update = "installations.update";
+        public const string Complete = "installations.complete";
+        public const string Cancel = "installations.cancel";
+    }
+
     public static IReadOnlyList<PermissionDefinition> All { get; } =
     [
         new(Users.Read, "Consultar usuarios", "Usuarios"),
@@ -113,6 +133,18 @@ public static class Permissions
         new(Inventory.Update, "Editar artículos y niveles mínimos", "Almacén"),
         new(Inventory.Deactivate, "Activar o desactivar artículos sin existencia", "Almacén"),
         new(Inventory.Move, "Registrar entradas, salidas y ajustes de inventario", "Almacén"),
+        new(Sales.Read, "Consultar ventas de equipos", "Ventas"),
+        new(Sales.Create, "Registrar ventas de equipos", "Ventas"),
+        new(Sales.Update, "Editar ventas en borrador", "Ventas"),
+        new(Sales.Confirm, "Confirmar ventas y descontar stock", "Ventas"),
+        new(Sales.Deliver, "Registrar la entrega de equipos vendidos", "Ventas"),
+        new(Sales.Complete, "Cerrar ventas entregadas", "Ventas"),
+        new(Sales.Cancel, "Anular ventas en borrador", "Ventas"),
+        new(Installations.Read, "Consultar instalaciones", "Instalaciones"),
+        new(Installations.Create, "Programar instalaciones de ventas o proyectos", "Instalaciones"),
+        new(Installations.Update, "Editar instalaciones y asignar técnicos", "Instalaciones"),
+        new(Installations.Complete, "Iniciar y completar instalaciones", "Instalaciones"),
+        new(Installations.Cancel, "Anular instalaciones pendientes", "Instalaciones"),
     ];
 }
 

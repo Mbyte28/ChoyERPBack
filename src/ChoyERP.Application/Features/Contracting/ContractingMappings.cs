@@ -1,3 +1,4 @@
+using ChoyERP.Application.Common.Extensions;
 using ChoyERP.Application.Features.Contracting.Dtos;
 using ChoyERP.Domain.Entities.Clients;
 using ChoyERP.Domain.Entities.Contracting;
@@ -129,15 +130,6 @@ internal static class ContractingMappings
 
     public static string FormatAddress(ClientAddress address)
     {
-        var parts = new[]
-        {
-            address.Line1,
-            address.Line2,
-            address.City,
-            address.State,
-            address.Country,
-        };
-
-        return string.Join(", ", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
+        return address.ToSingleLine();
     }
 }
